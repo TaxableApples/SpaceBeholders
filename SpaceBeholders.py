@@ -5,8 +5,6 @@ py -m pip install pygame numpy
 Start:
 py SpaceBoholders.py
 
-test
-
 """
 
 import pygame
@@ -200,7 +198,7 @@ while splash:
   screen.blit(splashtext, (screen.get_rect().centerx-75,screen.get_rect().centery+50))
   font = pygame.font.Font(None, 32)
   splashtext = font.render("Use Mouse to aim, Use keys A,S,D,W to fly", True, (255,255,255))
-  screen.blit(splashtext, (screen.get_rect().centerx,screen.get_rect().centery+50))
+  screen.blit(splashtext, (screen.get_rect().centerx-150,screen.get_rect().centery+150))
   pygame.display.flip()
   
   for event in pygame.event.get():
