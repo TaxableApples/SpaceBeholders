@@ -5,6 +5,8 @@ py -m pip install pygame numpy
 Start:
 py SpaceBoholders.py
 
+test
+
 """
 
 import pygame
