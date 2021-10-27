@@ -57,18 +57,18 @@ youwin = pygame.image.load("resources/images/youwin.png")
 splash = 1
 running = 0
 
-def backdrop():
-  global inc
-  for x in range(width/space.get_width()+1):
-    for y in range(height/space.get_height()+1):
-      inc += .01
-      if inc > 100:
-        inc = 0
-      screen.blit(space,(x*100+inc,y*100+inc)) 
+# def backdrop():
+#   global inc
+#   for x in range(width/space.get_width()+1):
+#     for y in range(height/space.get_height()+1):
+#       inc += .01
+#       if inc > 100:
+#         inc = 0
+#       screen.blit(space,(x*100+inc,y*100+inc)) 
 
 while splash:
   screen.fill(0)
-  backdrop()
+  # backdrop()
   
   font = pygame.font.Font(None, 54)
   splashtext = font.render("SPACE BEHOLDERS", True, (255,0,0))
@@ -92,7 +92,7 @@ while running:
   # 5 clear the screen
   screen.fill(0)
   # 6 draw the screen elements
-  backdrop()
+  # backdrop()
   
   font = pygame.font.Font(None, 24)
   t = font.render("Controls W = up, S = down, A = left, D = right, aim and shoot with the mouse", True, (255,0,0))

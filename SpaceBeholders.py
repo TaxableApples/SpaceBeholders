@@ -14,7 +14,6 @@ import math
 import numpy as np
 from os import path
 
-# constants
 WIDTH = 1024
 HEIGHT = 768
 FPS = 60
@@ -35,6 +34,10 @@ pygame.display.set_caption("SPACE BEHOLDERS")
 clock = pygame.time.Clock()
 pygame.mouse.set_visible(False)
 pygame.event.set_grab(True)
+
+gameover = pygame.image.load("resources/images/gameover.png")
+youwin = pygame.image.load("resources/images/youwin.png")
+
 
 splash = 1
 running = 0
@@ -186,6 +189,7 @@ for i in range(8):
     all_sprites.add(m)
     mobs.add(m)
 
+# Start Splash Screen
 while splash:
   screen.fill(0)
   # backdrop()
@@ -216,8 +220,9 @@ while running:
     
     # 1.0 Events
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == K_ESCAPE:
+                running = False
             
         if event.type == pygame.MOUSEBUTTONDOWN:
             player.shoot()
