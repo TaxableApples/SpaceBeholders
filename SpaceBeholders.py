@@ -21,33 +21,37 @@ img_folder = path.join(resources_folder, "images")
 # initialize pygame and make a window
 pygame.init()
 pygame.mixer.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.freetype.init();
 pygame.display.set_caption("SPACE BEHOLDERS")
-clock = pygame.time.Clock()
 pygame.mouse.set_visible(False)
 pygame.event.set_grab(True)
 
-gameover = pygame.image.load("resources/images/gameover.png")
-youwin = pygame.image.load("resources/images/youwin.png")
-healthbar = pygame.image.load("resources/images/healthbar.png")
-health = pygame.image.load("resources/images/health.png")
-healthvalue=194
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+clock = pygame.time.Clock()
+gameover = pygame.image.load(path.join(img_folder, "gameover.png"))
+youwin = pygame.image.load(path.join(img_folder, "youwin.png"))
 
+score = 0
 splash = 1
 running = 0
 exitcode = 0
 
+all_sprites = pygame.sprite.Group()
+mobs = pygame.sprite.Group()
+bullets = pygame.sprite.Group()
+
 class Player(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, img):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load(path.join(img_folder, "ship.png")).convert()
+        self.image = pygame.image.load(path.join(img_folder, img)).convert()
         self.backup_image = self.image
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
         self.radius = 44
-        self.rect.center = (WIDTH - 1014, HEIGHT / 2)
+        self.rect.center = (WIDTH / 2, HEIGHT - 20)
         self.speedx = 0
         self.speedy = 0
+        self.health = 196
 
     def update(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -55,7 +59,6 @@ class Player(pygame.sprite.Sprite):
         angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
         self.image = pygame.transform.rotate(self.backup_image, int(angle))
         self.rect = self.image.get_rect(center=self.rect.center)
-    
         if self.speedx > 0:
             self.speedx -= .08
         if self.speedx < 0:
@@ -73,7 +76,6 @@ class Player(pygame.sprite.Sprite):
             self.speedy = -5
         if keystate[pygame.K_s]:
             self.speedy = 5
-            
         if self.rect.left <= 5:
             self.rect.left = 5
         if self.rect.right >= 1020:
@@ -81,21 +83,20 @@ class Player(pygame.sprite.Sprite):
         if self.rect.top <= 5:
             self.rect.top = 5
         if self.rect.bottom >= 762:
-            self.rect.bottom = 762
-        
+            self.rect.bottom = 762       
         self.rect.x += self.speedx
         self.rect.y += self.speedy
     
     def shoot(self):
-        bullet = Bullet(self.rect.centerx, self.rect.centery)
+        bullet = Bullet(self.rect.centerx, self.rect.centery, GREEN)
         all_sprites.add(bullet)
         bullets.add(bullet)
     
 class Mob(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, img1, img2):
         pygame.sprite.Sprite.__init__(self)
-        self.image1 = pygame.image.load(path.join(img_folder, "alien.png")).convert()
-        self.image2 = pygame.image.load(path.join(img_folder, "alien2.png")).convert()
+        self.image1 = pygame.image.load(path.join(img_folder, img1)).convert()
+        self.image2 = pygame.image.load(path.join(img_folder, img2)).convert()
         self.image = self.image1
         self.image.set_colorkey(WHITE)
         self.image2.set_colorkey(WHITE)
@@ -105,6 +106,7 @@ class Mob(pygame.sprite.Sprite):
         self.rect.y = rd.randrange(-100, -40)
         self.speedy = rd.randrange(1, 8)
         self.speedx = rd.randrange(-3, 3)
+        self.penalty = 0
         self.last_update = pygame.time.get_ticks()
     
     def update_image(self):
@@ -120,19 +122,22 @@ class Mob(pygame.sprite.Sprite):
         self.update_image()
         self.rect.y += self.speedy
         self.rect.x += self.speedx
-        if self.rect.top > HEIGHT + 10 or self.rect.left < - 25 or self.rect.right > WIDTH + 20:
+        if self.rect.top > HEIGHT + 10:
+            self.penalty = rd.randint(5,20)
             self.rec = self.image.get_rect()
             self.rect.x = rd.randrange(0, WIDTH - self.rect.width)
             self.rect.y = rd.randrange(-100, -40)
             self.speedy = rd.randrange(1, 8)
+            penalties.append(self.penalty)
+            #self.kill()
+        if self.rect.left < 0 or self.rect.right > WIDTH:
+            self.speedx = -self.speedx
             
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, x, y, color):
         pygame.sprite.Sprite.__init__(self)
-        #self.image = pygame.image.load(path.join(img_folder, "bullet.png")).convert()
         self.image = pygame.Surface((10,10))
-        self.image.fill(GREEN)
-        
+        self.image.fill(color)       
         self.rect = self.image.get_rect()
         self.rect.centery = y
         self.rect.centerx = x
@@ -144,8 +149,7 @@ class Bullet(pygame.sprite.Sprite):
         
     def update(self):
         self.rect.x += self.velocity[0]
-        self.rect.y += self.velocity[1]
-        
+        self.rect.y += self.velocity[1]      
         if self.rect.bottom < 0:
             self.kill()
         if self.rect.top > 768:
@@ -156,9 +160,9 @@ class Bullet(pygame.sprite.Sprite):
             self.kill()
 
 class Cursor(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, file):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load(path.join(img_folder, "cursor.png")).convert()
+        self.image = pygame.image.load(path.join(img_folder, file)).convert()
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
     
@@ -167,28 +171,24 @@ class Cursor(pygame.sprite.Sprite):
         self.rect.x = x - 23
         self.rect.y = y - 23
         
-# other graphics
-space = pygame.image.load(path.join(img_folder, "space.png")).convert()
-  
-# Sprites
-all_sprites = pygame.sprite.Group()
-mobs = pygame.sprite.Group()
-bullets = pygame.sprite.Group()
-cursor = Cursor()
-player = Player()
-all_sprites.add(player)
-all_sprites.add(cursor)
+class Healthbar(pygame.sprite.Sprite):
+    def __init__(self, img, img2, loc):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load(path.join(img_folder, img)).convert()
+        self.health = pygame.image.load(path.join(img_folder, img2)).convert()
+        self.rect = self.image.get_rect()
+        self.rect.left, self.rect.top = loc
 
-for i in range(8):
-    m = Mob()
-    all_sprites.add(m)
-    mobs.add(m)
+class Background(pygame.sprite.Sprite):
+    def __init__(self, img, loc):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load(path.join(img_folder, img)).convert()
+        self.rect = self.image.get_rect()
+        self.rect.left, self.rect.top = loc
 
-# Start Splash Screen
+# Splash Screen 
 while splash:
   screen.fill(0)
-  # backdrop()
-  
   font = pygame.font.Font(None, 54)
   splashtext = font.render("SPACE BEHOLDERS", True, (255,0,0))
   screen.blit(splashtext, (screen.get_rect().centerx-165,screen.get_rect().centery))
@@ -206,46 +206,86 @@ while splash:
       running = 1
       pygame.time.set_timer(pygame.KEYDOWN, 0)
 
-# Game Loop
+space = Background("space.png", [0,0])
+cursor = Cursor("cursor.png")
+healthbar = Healthbar("healthbar.png", "health.png", [5,5])
+player = Player("ship.png")
+penalties = [0]
+all_sprites.add(player)
+all_sprites.add(cursor)
+
+for i in range(5):
+    m = Mob("alien.png", "alien2.png")
+    all_sprites.add(m)
+    mobs.add(m)
+
+
+# Game Loop******************************************
 while running:
     clock.tick(FPS)
     
-    # 1.0 Events
+    # Events
     for event in pygame.event.get():
         if event.type == pygame.KEYDOWN:
             if event.key == K_ESCAPE:
                 running = False
+                exitcode = 0
             
         if event.type == pygame.MOUSEBUTTONDOWN:
             player.shoot()
             
-    # 2.0 Update
+    # Update
     all_sprites.update()
     
-    # 2.1 check for collisions
+    # Check for Collisions
     hits = pygame.sprite.groupcollide(mobs, bullets, True, True)
     for hit in hits:
-        m = Mob()
+        m = Mob("alien.png", "alien2.png")
         all_sprites.add(m)
         mobs.add(m)
-        
-    hits = pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle)
-    if hits:
-        healthvalue -= rd.randint(5,20)
+        score += rd.randint(5,20)
 
-    # 2.2 win / lose
-    if healthvalue<=0:
+    collide = pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle)
+    if collide:
+        player.health -= rd.randint(5,20)
+
+    # Win / Lose
+    if player.health <= 0:
+        exitcode=1
         running=0
-        exitcode=0
-    
-    # 3.0 Draw
+
+    if len(penalties) > 1:
+        score -= penalties[1]
+        penalties.pop()
+
+    # Draw
     screen.fill(BLACK)
-    screen.blit(space,(32,64))
-    screen.blit(healthbar,(5,5))
-    for health1 in range(healthvalue):
-        screen.blit(health, (health1+8,8))
+    screen.blit(space.image,space.rect)
+    screen.blit(healthbar.image,(5,5))
+
+    font = pygame.font.Font(None, 32)
+    scoretext = font.render("score: " + str(score), True, (255,0,0))
+    screen.blit(scoretext, (500,700))
+    
+    for health1 in range(player.health):
+        screen.blit(healthbar.health, (health1+8,8))
     
     all_sprites.draw(screen)
-    pygame.display.flip() # always do this last
-    
+    pygame.display.flip()
+
+# game over *****************************************
+while exitcode:
+    for event in pygame.event.get():
+        if event.type == pygame.KEYDOWN:
+            if event.key == K_ESCAPE:
+                exitcode = 0
+
+    screen.fill(0)
+    if player.health<=0: 
+        screen.blit(gameover, (0,0))
+    else: 
+        screen.blit(youwin, (0,0))
+
+    pygame.display.flip()
+
 pygame.quit()
