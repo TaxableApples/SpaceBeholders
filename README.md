@@ -1,5 +1,7 @@
 # SpaceBeholders
-Save the world from space alien beholders in this exciting shooter.
+Save the world from space alien beholders 
+
+Game is a work in progress.
 
 Installation:
 py -m pip install pygame numpy
