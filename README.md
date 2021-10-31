@@ -1,8 +1,11 @@
 # SpaceBeholders
 Save the world from space alien beholders in this exciting shooter.
 
-Dependencies:
-pip install pygame numpy
+Installation:
+py -m pip install pygame numpy
+
+Start:
+py SpaceBoholders.py
 
 Controls:
 Use keys 'A' 'S' 'D' 'W' to fly,

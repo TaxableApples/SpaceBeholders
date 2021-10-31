@@ -1,12 +1,3 @@
-"""
-Installation:
-py -m pip install pygame numpy
-
-Start:
-py SpaceBoholders.py
-
-"""
-
 import pygame
 from pygame.locals import *
 import random as rd
@@ -24,7 +15,8 @@ GREEN = (0,255,0)
 YELLOW = (255, 255, 0)
 
 game_folder = path.dirname(__file__)
-img_folder = path.join(game_folder, "img")
+resources_folder = path.join(game_folder, "resources")
+img_folder = path.join(resources_folder, "images")
 
 # initialize pygame and make a window
 pygame.init()
@@ -37,10 +29,13 @@ pygame.event.set_grab(True)
 
 gameover = pygame.image.load("resources/images/gameover.png")
 youwin = pygame.image.load("resources/images/youwin.png")
-
+healthbar = pygame.image.load("resources/images/healthbar.png")
+health = pygame.image.load("resources/images/health.png")
+healthvalue=194
 
 splash = 1
 running = 0
+exitcode = 0
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -210,11 +205,8 @@ while splash:
       splash = 0
       running = 1
       pygame.time.set_timer(pygame.KEYDOWN, 0)
-  
-# 4 game loop
-exitcode = 0
 
-#Game Loop
+# Game Loop
 while running:
     clock.tick(FPS)
     
@@ -239,11 +231,19 @@ while running:
         
     hits = pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle)
     if hits:
-        running = True #Change to False to test collisions
+        healthvalue -= rd.randint(5,20)
+
+    # 2.2 win / lose
+    if healthvalue<=0:
+        running=0
+        exitcode=0
     
     # 3.0 Draw
     screen.fill(BLACK)
     screen.blit(space,(32,64))
+    screen.blit(healthbar,(5,5))
+    for health1 in range(healthvalue):
+        screen.blit(health, (health1+8,8))
     
     all_sprites.draw(screen)
     pygame.display.flip() # always do this last
