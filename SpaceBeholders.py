@@ -18,6 +18,7 @@ SPAWN = pygame.USEREVENT + 1
 PENALTY = [0]
 GAME = True
 LEVEL = 4
+DEBUG = True
 
 game_folder = path.dirname(__file__)
 resources_folder = path.join(game_folder, "resources")
@@ -218,6 +219,7 @@ class Game(object):
         self.score = 0
         self.deaths = -1
         self.level = 4
+        self.timer = 20.00
 
         self.clock = pygame.time.Clock()
         self.all = pygame.sprite.Group()
@@ -244,7 +246,11 @@ class Game(object):
         while self.running:
             screen.fill(0)
             self.clock.tick(FPS)
-            self.timer = round((550000-pygame.time.get_ticks())/1000%60, 1)
+            if self.timer < 0.0:
+                self.timer = 20.00
+
+            self.timer = round(self.timer - .01, 2)
+            #self.timer = round((90000-pygame.time.get_ticks())/1000%60, 1)
 
             # Control
             for e in pygame.event.get():
@@ -262,7 +268,10 @@ class Game(object):
             # Collisions
             hits = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
             for _ in hits:
-                if self.timer > 10:
+                if DEBUG: 
+                    print("Create another monster? " + str(self.timer < 10.0 and len(self.enemies) == self.level))
+
+                if self.timer > 5.0 and len(self.enemies) <= self.level:
                     m = Mob("alien.png", "alien2.png")
                     self.all.add(m)
                     self.enemies.add(m)
@@ -285,7 +294,7 @@ class Game(object):
                 newlevel = self.level + 1
                 while levelup:
                     screen.fill(BLACK)
-                    gamefont.render_to(screen, (200,500), "Press Any Key to Continue to the next Level: " + str(self.level - 3), RED, None, size=18)
+                    gamefont.render_to(screen, (150,470), "Press Any Key to Continue to the next Level: " + str(self.level - 3), RED, None, size=18)
                     if self.level != newlevel:
                         self.level += 1
                         for _ in range(self.level):
@@ -305,9 +314,14 @@ class Game(object):
             for i in range(self.player.health):
                 screen.blit(self.healthbar.health, (i+8,8))
 
+            gamefont.render_to(screen, (875,15), "'Esc' to Quit", RED, None, size=18)
             gamefont.render_to(screen, (500,700), "Score: " + str(self.score), RED, None, size=18)            
             gamefont.render_to(screen, (500,650), "Level: " + str(self.level - 3), RED, None, size=18)
             gamefont.render_to(screen, (500,600), "Round: " + str(self.timer), RED, None, size=18)            
+            if self.timer < 3.0:
+                gamefont.render_to(screen, (500,300), str(round(self.timer, 0)), RED, None, size=40)
+            if DEBUG:
+                gamefont.render_to(screen, (700,600), "Enemies: " + str(len(self.enemies)), RED, None, size=18)    
 
             self.all.draw(screen)
             pygame.display.flip()
@@ -327,6 +341,7 @@ while running:
                 running = False
 
     screen.fill(BLACK)
+    gamefont.render_to(screen, (875,15), "'Esc' to Quit", RED, None, size=18)
     pygame.display.flip()
 
 pygame.quit()
