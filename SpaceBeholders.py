@@ -1,18 +1,23 @@
 import pygame
+import pygame.freetype
 from pygame.locals import *
 import random as rd
 import math
 import numpy as np
 from os import path
 
-WIDTH = 1024
-HEIGHT = 768
+WIDTH, HEIGHT = 1024, 768
 FPS = 60
 BLACK = (0,0,0)
 WHITE = (255,255,255)
 RED = (255,0,0)
 GREEN = (0,255,0)
 YELLOW = (255, 255, 0)
+
+SPAWN = pygame.USEREVENT + 1
+PENALTY = [0]
+GAME = True
+LEVEL = 4
 
 game_folder = path.dirname(__file__)
 resources_folder = path.join(game_folder, "resources")
@@ -26,14 +31,14 @@ pygame.display.set_caption("SPACE BEHOLDERS")
 pygame.mouse.set_visible(False)
 pygame.event.set_grab(True)
 
+gamefont = pygame.freetype.Font(path.join(resources_folder, "AlloyInk.ttf"), 22)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 gameover = pygame.image.load(path.join(img_folder, "gameover.png"))
 youwin = pygame.image.load(path.join(img_folder, "youwin.png"))
 
 score = 0
-splash = 1
-running = 0
+running = 1
 exitcode = 0
 
 all_sprites = pygame.sprite.Group()
@@ -128,7 +133,7 @@ class Mob(pygame.sprite.Sprite):
             self.rect.x = rd.randrange(0, WIDTH - self.rect.width)
             self.rect.y = rd.randrange(-100, -40)
             self.speedy = rd.randrange(1, 8)
-            penalties.append(self.penalty)
+            PENALTY.append(self.penalty)
             #self.kill()
         if self.rect.left < 0 or self.rect.right > WIDTH:
             self.speedx = -self.speedx
@@ -186,106 +191,142 @@ class Background(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.left, self.rect.top = loc
 
-# Splash Screen 
-while splash:
-  screen.fill(0)
-  font = pygame.font.Font(None, 54)
-  splashtext = font.render("SPACE BEHOLDERS", True, (255,0,0))
-  screen.blit(splashtext, (screen.get_rect().centerx-165,screen.get_rect().centery))
-  font = pygame.font.Font(None, 32)
-  splashtext = font.render("press any key to start", True, (255,255,255))
-  screen.blit(splashtext, (screen.get_rect().centerx-75,screen.get_rect().centery+50))
-  font = pygame.font.Font(None, 32)
-  splashtext = font.render("Use Mouse to aim, Use keys A,S,D,W to fly", True, (255,255,255))
-  screen.blit(splashtext, (screen.get_rect().centerx-150,screen.get_rect().centery+150))
-  pygame.display.flip()
-  
-  for event in pygame.event.get():
-    if event.type == pygame.KEYDOWN:
-      splash = 0
-      running = 1
-      pygame.time.set_timer(pygame.KEYDOWN, 0)
+splash = True
 
-space = Background("space.png", [0,0])
-cursor = Cursor("cursor.png")
-healthbar = Healthbar("healthbar.png", "health.png", [5,5])
-player = Player("ship.png")
-penalties = [0]
-all_sprites.add(player)
-all_sprites.add(cursor)
+class Splashscreen(object):
+    def __init__(self):
+        self.running = True
 
-for i in range(5):
-    m = Mob("alien.png", "alien2.png")
-    all_sprites.add(m)
-    mobs.add(m)
+    def run(self):
+        while self.running:
+            for e in pygame.event.get():
+                if e.type == pygame.KEYDOWN:
+                    self.running = False
+                    pygame.time.set_timer(pygame.KEYDOWN, 0)
+                    print(self.running)
+
+            screen.fill(0)
+            gamefont.render_to(screen, (210 ,HEIGHT / 2), "SPACE BEHOLDERS", RED, None, size=64)
+            gamefont.render_to(screen, (370 , 500), "Press Any Key to Play", RED, None, size=22)
+            gamefont.render_to(screen, (190 , 600), "Use Mouse to aim and shoot, Use keys A,S,D,W to fly", RED, None, size=22)
+            pygame.display.flip()
 
 
-# Game Loop******************************************
+class Game(object):
+    def __init__(self):
+        self.running = True
+        self.score = 0
+        self.deaths = -1
+        self.level = 4
+
+        self.clock = pygame.time.Clock()
+        self.all = pygame.sprite.Group()
+        self.enemies = pygame.sprite.Group()
+        self.bullets = pygame.sprite.Group()
+
+        self.space = Background("space.png", [0,0])
+        self.player = Player("ship.png")
+        self.cursor = Cursor("cursor.png")
+        self.healthbar = Healthbar("healthbar.png", "health.png", [5,5])
+
+        self.all.add(self.player)
+        self.all.add(self.cursor)
+
+        for _ in range(self.level):
+            self.m = Mob("alien.png", "alien2.png")
+            self.all.add(self.m)
+            self.enemies.add(self.m)
+
+    def restart(self):
+        pygame.time.set_timer(SPAWN, 1000 - self.score * 2)
+
+    def run(self):
+        while self.running:
+            screen.fill(0)
+            self.clock.tick(FPS)
+            self.timer = round((550000-pygame.time.get_ticks())/1000%60, 1)
+
+            # Control
+            for e in pygame.event.get():
+                if e.type == pygame.KEYDOWN:
+                    if e.key == K_ESCAPE:
+                        self.running = False
+
+                if e.type == pygame.MOUSEBUTTONDOWN or e.type == pygame.K_m:
+                    self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, GREEN)
+                    self.all.add(self.bullet)
+                    self.bullets.add(self.bullet)
+
+            self.all.update()
+
+            # Collisions
+            hits = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
+            for _ in hits:
+                if self.timer > 10:
+                    m = Mob("alien.png", "alien2.png")
+                    self.all.add(m)
+                    self.enemies.add(m)
+                    self.score += rd.randint(5,20)
+
+            collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
+            if collide:
+                self.player.health -= rd.randint(5,20)
+
+            # Win / Lose
+            if self.player.health <= 0:
+                self.running = 0
+
+            if len(PENALTY) > 1:
+                self.score -= PENALTY[1]
+                PENALTY.pop()
+
+            if self.timer == 0:
+                levelup = True
+                newlevel = self.level + 1
+                while levelup:
+                    screen.fill(BLACK)
+                    gamefont.render_to(screen, (200,500), "Press Any Key to Continue to the next Level: " + str(self.level - 3), RED, None, size=18)
+                    if self.level != newlevel:
+                        self.level += 1
+                        for _ in range(self.level):
+                            m = Mob("alien.png", "alien2.png")
+                            self.all.add(m)
+                            self.enemies.add(m)
+                    
+                    for e in pygame.event.get():
+                        if e.type == pygame.KEYDOWN:
+                            levelup = False
+                    pygame.display.flip()
+                           
+            # Draw
+            screen.fill(BLACK)
+            screen.blit(self.space.image,self.space.rect)
+            screen.blit(self.healthbar.image,(5,5))
+            for i in range(self.player.health):
+                screen.blit(self.healthbar.health, (i+8,8))
+
+            gamefont.render_to(screen, (500,700), "Score: " + str(self.score), RED, None, size=18)            
+            gamefont.render_to(screen, (500,650), "Level: " + str(self.level - 3), RED, None, size=18)
+            gamefont.render_to(screen, (500,600), "Round: " + str(self.timer), RED, None, size=18)            
+
+            self.all.draw(screen)
+            pygame.display.flip()
+
 while running:
-    clock.tick(FPS)
-    
-    # Events
-    for event in pygame.event.get():
-        if event.type == pygame.KEYDOWN:
-            if event.key == K_ESCAPE:
+    if splash: Splashscreen().run()
+    splash = False
+
+    if GAME: Game().run()
+    GAME = False
+
+    for e in pygame.event.get():
+        if e.type == pygame.QUIT:
+            running = False
+        if e.type == pygame.KEYDOWN:
+            if e.key == K_ESCAPE:
                 running = False
-                exitcode = 0
-            
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            player.shoot()
-            
-    # Update
-    all_sprites.update()
-    
-    # Check for Collisions
-    hits = pygame.sprite.groupcollide(mobs, bullets, True, True)
-    for hit in hits:
-        m = Mob("alien.png", "alien2.png")
-        all_sprites.add(m)
-        mobs.add(m)
-        score += rd.randint(5,20)
 
-    collide = pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle)
-    if collide:
-        player.health -= rd.randint(5,20)
-
-    # Win / Lose
-    if player.health <= 0:
-        exitcode=1
-        running=0
-
-    if len(penalties) > 1:
-        score -= penalties[1]
-        penalties.pop()
-
-    # Draw
     screen.fill(BLACK)
-    screen.blit(space.image,space.rect)
-    screen.blit(healthbar.image,(5,5))
-
-    font = pygame.font.Font(None, 32)
-    scoretext = font.render("score: " + str(score), True, (255,0,0))
-    screen.blit(scoretext, (500,700))
-    
-    for health1 in range(player.health):
-        screen.blit(healthbar.health, (health1+8,8))
-    
-    all_sprites.draw(screen)
-    pygame.display.flip()
-
-# game over *****************************************
-while exitcode:
-    for event in pygame.event.get():
-        if event.type == pygame.KEYDOWN:
-            if event.key == K_ESCAPE:
-                exitcode = 0
-
-    screen.fill(0)
-    if player.health<=0: 
-        screen.blit(gameover, (0,0))
-    else: 
-        screen.blit(youwin, (0,0))
-
     pygame.display.flip()
 
 pygame.quit()
