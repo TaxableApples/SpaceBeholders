@@ -19,6 +19,7 @@ PENALTY = [0]
 GAME = True
 LEVEL = 4
 DEBUG = True
+RUNNING = 1
 
 game_folder = path.dirname(__file__)
 resources_folder = path.join(game_folder, "resources")
@@ -35,16 +36,10 @@ pygame.event.set_grab(True)
 gamefont = pygame.freetype.Font(path.join(resources_folder, "AlloyInk.ttf"), 22)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
-gameover = pygame.image.load(path.join(img_folder, "gameover.png"))
-youwin = pygame.image.load(path.join(img_folder, "youwin.png"))
+#gameover = pygame.image.load(path.join(img_folder, "gameover.png"))
+#youwin = pygame.image.load(path.join(img_folder, "youwin.png"))
 
-score = 0
-running = 1
-exitcode = 0
 
-all_sprites = pygame.sprite.Group()
-mobs = pygame.sprite.Group()
-bullets = pygame.sprite.Group()
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, img):
@@ -92,11 +87,6 @@ class Player(pygame.sprite.Sprite):
             self.rect.bottom = 762       
         self.rect.x += self.speedx
         self.rect.y += self.speedy
-    
-    def shoot(self):
-        bullet = Bullet(self.rect.centerx, self.rect.centery, GREEN)
-        all_sprites.add(bullet)
-        bullets.add(bullet)
     
 class Mob(pygame.sprite.Sprite):
     def __init__(self, img1, img2):
@@ -323,7 +313,7 @@ class Game(object):
             self.all.draw(screen)
             pygame.display.flip()
 
-while running:
+while RUNNING:
     if splash: Splashscreen().run()
     splash = False
 
@@ -332,14 +322,17 @@ while running:
 
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
-            running = False
+            RUNNING = False
         if e.type == pygame.KEYDOWN:
             if e.key == K_ESCAPE:
-                running = False
+                RUNNING = False
+            else:
+                splash = True
+                GAME = True
 
     screen.fill(BLACK)
-    gamefont.render_to(screen, (875,15), "'Esc' to Quit", RED, None, size=18)
     gamefont.render_to(screen, (300,300), "You quit... or died!", RED, None, size=40)
+    gamefont.render_to(screen, (270,400), "Press 'esc' to quit or any key to continue", RED, None, size=20)
     pygame.display.flip()
 
 pygame.quit()
