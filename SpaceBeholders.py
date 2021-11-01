@@ -31,7 +31,7 @@ pygame.freetype.init();
 pygame.display.set_caption("SPACE BEHOLDERS")
 pygame.mouse.set_visible(False)
 pygame.event.set_grab(True)
-a
+
 gamefont = pygame.freetype.Font(path.join(resources_folder, "AlloyInk.ttf"), 22)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
@@ -339,6 +339,7 @@ while running:
 
     screen.fill(BLACK)
     gamefont.render_to(screen, (875,15), "'Esc' to Quit", RED, None, size=18)
+    gamefont.render_to(screen, (300,300), "You quit... or died!", RED, None, size=40)
     pygame.display.flip()
 
 pygame.quit()
