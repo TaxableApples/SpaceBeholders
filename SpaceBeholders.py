@@ -26,12 +26,12 @@ img_folder = path.join(resources_folder, "images")
 
 # initialize pygame and make a window
 pygame.init()
-pygame.mixer.init()
+#pygame.mixer.init()
 pygame.freetype.init();
 pygame.display.set_caption("SPACE BEHOLDERS")
 pygame.mouse.set_visible(False)
 pygame.event.set_grab(True)
-
+a
 gamefont = pygame.freetype.Font(path.join(resources_folder, "AlloyInk.ttf"), 22)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
@@ -268,9 +268,6 @@ class Game(object):
             # Collisions
             hits = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
             for _ in hits:
-                if DEBUG: 
-                    print("Create another monster? " + str(self.timer < 10.0 and len(self.enemies) == self.level))
-
                 if self.timer > 5.0 and len(self.enemies) <= self.level:
                     m = Mob("alien.png", "alien2.png")
                     self.all.add(m)
