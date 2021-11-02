@@ -27,9 +27,6 @@ IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "AlloyInk.ttf"), 22)
 
-#gameover = pygame.image.load(path.join(IMG_FOLDER, "gameover.png"))
-#youwin = pygame.image.load(path.join(IMG_FOLDER, "youwin.png"))
-
 class Player(pygame.sprite.Sprite):
     def __init__(self, img):
         pygame.sprite.Sprite.__init__(self)
@@ -198,14 +195,12 @@ class Splashscreen(object):
                 if e.type == pygame.KEYDOWN:
                     self.running = False
                     pygame.time.set_timer(pygame.KEYDOWN, 0)
-                    print(self.running)
 
             SCREEN.fill(0)
             GAMEFONT.render_to(SCREEN, (210 ,HEIGHT / 2), "SPACE BEHOLDERS", RED, None, size=64)
             GAMEFONT.render_to(SCREEN, (370 , 500), "Press Any Key to Play", RED, None, size=22)
             GAMEFONT.render_to(SCREEN, (190 , 600), "Use Mouse to aim and shoot, Use keys A,S,D,W to fly", RED, None, size=22)
             pygame.display.flip()
-
 
 class Game(object):
     def __init__(self):
@@ -300,7 +295,8 @@ class Game(object):
                 newlevel = self.level + 1
                 while levelup:
                     SCREEN.fill(BLACK)
-                    GAMEFONT.render_to(SCREEN, (150,470), "Press Any Key to Continue to the next Level: " + str(self.level - 3), RED, None, size=18)
+                    GAMEFONT.render_to(SCREEN, (100,470), "Press Any Key to Continue to Level: " + str(self.level - 3), RED, None, size=40)
+                    GAMEFONT.render_to(SCREEN, (400,550), "SCORE: " + str(self.score), RED, None, size=40)
                     if self.level != newlevel:
                         self.level += 1
                         for _ in range(self.level):
@@ -312,7 +308,7 @@ class Game(object):
                         if e.type == pygame.KEYDOWN:
                             levelup = False
                     pygame.display.flip()
-                           
+                  
             # Draw
             SCREEN.fill(BLACK)
             SCREEN.blit(self.space.image,self.space.rect)
@@ -331,16 +327,18 @@ class Game(object):
 
             self.all.draw(SCREEN)
             pygame.display.flip()
+        
+        print(self.score) 
+        global SCORE 
+        SCORE = self.score
 
 def main():
     pygame.init()
+    #pygame.mixer.init() #breaks when user device doesn't have a sound card installed...
     splash = True
     game = True 
     running = True
-
-    # initialize pygame and make a window
-    pygame.init()
-    #pygame.mixer.init()
+    
     
     pygame.display.set_caption("SPACE BEHOLDERS")
     pygame.mouse.set_visible(False)
@@ -362,9 +360,10 @@ def main():
                 else:
                     splash = True
                     game = True
-
+                    
         SCREEN.fill(BLACK)
         GAMEFONT.render_to(SCREEN, (300,300), "You quit... or died!", RED, None, size=40)
+        GAMEFONT.render_to(SCREEN, (400,350), "Score: " + str(SCORE), RED, None, size=40) 
         GAMEFONT.render_to(SCREEN, (270,400), "Press 'esc' to quit or any key to continue", RED, None, size=20)
         pygame.display.flip()
 
