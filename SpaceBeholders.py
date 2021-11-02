@@ -277,6 +277,8 @@ class Game(object):
                     self.enemies.add(m)
                     self.score += rd.randint(5,20)
 
+            hits = pygame.sprite.groupcollide(self.asteroids, self.bullets, False, True)        
+
             collide = pygame.sprite.spritecollide(self.player, self.asteroids, False, pygame.sprite.collide_circle)
             if collide:
                 self.player.health -= rd.randint(5,20)
