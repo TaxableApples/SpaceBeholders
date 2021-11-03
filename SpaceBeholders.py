@@ -118,6 +118,7 @@ class Alien(pygame.sprite.Sprite):
 class Asteroid(pygame.sprite.Sprite):
     def __init__(self, x):
         pygame.sprite.Sprite.__init__(self)
+        
         self.image = pygame.image.load(path.join(IMG_FOLDER, "asteroid2.png"))
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
@@ -126,6 +127,11 @@ class Asteroid(pygame.sprite.Sprite):
         self.rect.x = x
         self.speedy = rd.randrange(1, 8)
         self.last_update = pygame.time.get_ticks()
+        self.random = rd.randint(1, 20)
+        if self.random > 18:
+            self.rect.x = x
+        else:
+            self.rect.x = rd.randint(0, WIDTH)
 
     def update(self):
         self.rect.y += self.speedy
@@ -226,6 +232,9 @@ class Game(object):
         self.player = Player("ship2.png")
         self.cursor = Cursor("cursor.png")
         self.healthbar = Healthbar("healthbar.png", "health.png", [5,5])
+        self.shooting = False
+        self.bullet_timer = 0.7
+        self.shoot_if = 0
 
         self.all.add(self.player)
         self.all.add(self.cursor)
@@ -256,16 +265,29 @@ class Game(object):
                 self.all.add(self.asteroid)
 
             # Control
+
+            self.bullet_if = self.clock.tick(FPS)/1000
+
             for e in pygame.event.get():
                 if e.type == pygame.KEYDOWN:
                     if e.key == K_ESCAPE:
                         self.running = False
 
-                if e.type == pygame.MOUSEBUTTONDOWN or e.type == pygame.K_m:
-                    self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, GREEN)
-                    self.all.add(self.bullet)
-                    self.bullets.add(self.bullet)
-                    self.accuracy[1] += 1
+                if e.type == pygame.MOUSEBUTTONDOWN:
+                    self.bullet_timer = 0
+                    self.shooting = True
+                
+                if e.type == pygame.MOUSEBUTTONUP:
+                    self.shooting = False
+
+                if self.shooting:
+                    self.bullet_timer -= self.bullet_if
+                    if self.bullet_timer <= 0:
+                        self.bullet_timer = 0.7
+                        self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, GREEN)
+                        self.all.add(self.bullet)
+                        self.bullets.add(self.bullet)
+                        self.accuracy[1] += 1
 
             self.all.update()
 
