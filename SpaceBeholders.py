@@ -118,7 +118,7 @@ class Alien(pygame.sprite.Sprite):
 class Asteroid(pygame.sprite.Sprite):
     def __init__(self, x):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load(path.join(IMG_FOLDER, "asteroid.png"))
+        self.image = pygame.image.load(path.join(IMG_FOLDER, "asteroid2.png"))
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
         self.radius = 44
@@ -188,6 +188,8 @@ class Background(pygame.sprite.Sprite):
 class Splashscreen(object):
     def __init__(self):
         self.running = True
+        self.logo = pygame.image.load(path.join(IMG_FOLDER, "beholder1.png"))
+        self.logo.set_colorkey(WHITE)
 
     def run(self):
         while self.running:
@@ -197,6 +199,7 @@ class Splashscreen(object):
                     pygame.time.set_timer(pygame.KEYDOWN, 0)
 
             SCREEN.fill(0)
+            SCREEN.blit(self.logo, (440, 200))
             GAMEFONT.render_to(SCREEN, (210 ,HEIGHT / 2), "SPACE BEHOLDERS", RED, None, size=64)
             GAMEFONT.render_to(SCREEN, (370 , 500), "Press Any Key to Play", RED, None, size=22)
             GAMEFONT.render_to(SCREEN, (190 , 600), "Use Mouse to aim and shoot, Use keys A,S,D,W to fly", RED, None, size=22)
@@ -218,7 +221,7 @@ class Game(object):
         self.asteroids = pygame.sprite.Group()
 
         self.space = Background("space.png", [0,0])
-        self.player = Player("ship.png")
+        self.player = Player("ship2.png")
         self.cursor = Cursor("cursor.png")
         self.healthbar = Healthbar("healthbar.png", "health.png", [5,5])
 
@@ -226,7 +229,7 @@ class Game(object):
         self.all.add(self.cursor)
 
         for _ in range(self.level):
-            self.m = Alien("alien.png", "alien2.png")
+            self.m = Alien("beholder1.png", "beholder2.png")
             self.all.add(self.m)
             self.enemies.add(self.m)
 
@@ -267,7 +270,7 @@ class Game(object):
             hits = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
             for _ in hits:
                 if self.timer > 5.0 and len(self.enemies) <= self.level:
-                    m = Alien("alien.png", "alien2.png")
+                    m = Alien("beholder1.png", "beholder2.png")
                     self.all.add(m)
                     self.enemies.add(m)
                     self.score += rd.randint(5,20)
@@ -300,7 +303,7 @@ class Game(object):
                     if self.level != newlevel:
                         self.level += 1
                         for _ in range(self.level):
-                            m = Alien("alien.png", "alien2.png")
+                            m = Alien("beholder1.png", "beholder2.png")
                             self.all.add(m)
                             self.enemies.add(m)
                     
@@ -362,9 +365,10 @@ def main():
                     game = True
                     
         SCREEN.fill(BLACK)
-        GAMEFONT.render_to(SCREEN, (300,300), "You quit... or died!", RED, None, size=40)
-        GAMEFONT.render_to(SCREEN, (400,350), "Score: " + str(SCORE), RED, None, size=40) 
-        GAMEFONT.render_to(SCREEN, (270,400), "Press 'esc' to quit or any key to continue", RED, None, size=20)
+        GAMEFONT.render_to(SCREEN, (370,300), "Did you die?", RED, None, size=40)
+        GAMEFONT.render_to(SCREEN, (350,350), "Final Score: " + str(SCORE), RED, None, size=40) 
+        GAMEFONT.render_to(SCREEN, (390,410), "Press 'esc' to quit", RED, None, size=20)
+        GAMEFONT.render_to(SCREEN, (340,450), "Press 'any key' to continue", RED, None, size=20)
         pygame.display.flip()
 
     pygame.quit()
