@@ -24,6 +24,9 @@ GAME_FOLDER = path.dirname(__file__)
 RESOURCES_FOLDER = path.join(GAME_FOLDER, "resources")
 IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
 
+# ALIEN_SHEET_IMAGE = pygame.image.load(path.join(IMG_FOLDER,'beholder.png')).convert_alpha()
+# ALIEN_SHEET = Aliensheet(ALIEN_SHEET_IMAGE)
+
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "AlloyInk.ttf"), 22)
 
@@ -73,15 +76,24 @@ class Player(pygame.sprite.Sprite):
             self.rect.bottom = 762       
         self.rect.x += self.speedx
         self.rect.y += self.speedy
-    
+
+class Aliensheet():
+    def __init__(self):
+        self.sheet = pygame.image.load(path.join(IMG_FOLDER,'beholder.png')).convert_alpha()
+
+    def get_image(self, frame, row):
+        image = pygame.Surface((100, 100)).convert_alpha()
+        image.blit(self.sheet, (0,0), ((frame * 100), (row * 100), 100, 100))
+        image.set_colorkey(WHITE)
+
+        return image
+
 class Alien(pygame.sprite.Sprite):
-    def __init__(self, img1, img2):
+    def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image1 = pygame.image.load(path.join(IMG_FOLDER, img1)).convert()
-        self.image2 = pygame.image.load(path.join(IMG_FOLDER, img2)).convert()
+        self.image1 = Aliensheet().get_image(0,0)
+        self.image2 = Aliensheet().get_image(1,0)
         self.image = self.image1
-        self.image.set_colorkey(WHITE)
-        self.image2.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
         self.radius = 44
         self.rect.x = rd.randrange(0, WIDTH - self.rect.width)
@@ -93,6 +105,7 @@ class Alien(pygame.sprite.Sprite):
     
     def update_image(self):
         now = pygame.time.get_ticks()
+        #print(str(now) + " " + str(self.last_update) + " " + str(now-self.last_update))
         if now - self.last_update > 80:
             if self.image == self.image1:
                 self.image = self.image2
@@ -114,7 +127,22 @@ class Alien(pygame.sprite.Sprite):
             #self.kill()
         if self.rect.left < 0 or self.rect.right > WIDTH:
             self.speedx = -self.speedx
-            
+
+class AlienDeath(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.last_update = pygame.time.get_ticks()
+        self.image1 = Aliensheet().get_image(2,0)
+        self.image2 = Aliensheet().get_image(3,0)
+        self.image3 = Aliensheet().get_image(1,1)
+        self.image4 = Aliensheet().get_image(3,1)
+        self.image5 = Aliensheet().get_image(4,1)
+        self.image6 = Aliensheet().get_image(5,1)
+        self.image = self.image1
+
+    def update(self):
+        self.image = self.image1
+
 class Asteroid(pygame.sprite.Sprite):
     def __init__(self, x):
         pygame.sprite.Sprite.__init__(self)
@@ -232,15 +260,15 @@ class Game(object):
         self.player = Player("ship2.png")
         self.cursor = Cursor("cursor.png")
         self.healthbar = Healthbar("healthbar.png", "health.png", [5,5])
-        self.shooting = False
-        self.bullet_timer = 0.7
-        self.shoot_if = 0
+        #self.shooting = False
+        #self.bullet_timer = 0
+        #self.shoot_if = 0
 
         self.all.add(self.player)
         self.all.add(self.cursor)
 
         for _ in range(self.level):
-            self.m = Alien("beholder1.png", "beholder2.png")
+            self.m = Alien()
             self.all.add(self.m)
             self.enemies.add(self.m)
 
@@ -249,7 +277,6 @@ class Game(object):
 
     def run(self):
         while self.running:
-            SCREEN.fill(0)
             self.clock.tick(FPS)
             if self.timer < 0.0:
                 self.timer = 20.00
@@ -265,7 +292,7 @@ class Game(object):
 
             # Control
 
-            self.bullet_if = self.clock.tick(FPS)/1000
+            #self.bullet_if = self.clock.tick(FPS)/1000
 
             for e in pygame.event.get():
                 if e.type == pygame.KEYDOWN:
@@ -273,20 +300,24 @@ class Game(object):
                         self.running = False
 
                 if e.type == pygame.MOUSEBUTTONDOWN:
-                    self.bullet_timer = 0
-                    self.shooting = True
+                    #self.bullet_timer = 0
+                    #self.shooting = True
+                    self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, GREEN)
+                    self.all.add(self.bullet)
+                    self.bullets.add(self.bullet)
+                    self.accuracy[1] += 1
                 
                 if e.type == pygame.MOUSEBUTTONUP:
                     self.shooting = False
 
-                if self.shooting:
-                    self.bullet_timer -= self.bullet_if
-                    if self.bullet_timer <= 0:
-                        self.bullet_timer = 0.7
-                        self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, GREEN)
-                        self.all.add(self.bullet)
-                        self.bullets.add(self.bullet)
-                        self.accuracy[1] += 1
+                #if self.shooting:
+                    #self.bullet_timer -= self.bullet_if
+                    # if self.bullet_timer <= 0:
+                    #     self.bullet_timer = 0.5
+                    #     self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, GREEN)
+                    #     self.all.add(self.bullet)
+                    #     self.bullets.add(self.bullet)
+                    #     self.accuracy[1] += 1
 
             self.all.update()
 
@@ -294,13 +325,13 @@ class Game(object):
             hits = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
             for _ in hits:
                 if self.timer > 5.0 and len(self.enemies) <= self.level:
-                    m = Alien("beholder1.png", "beholder2.png")
+                    m = Alien()
                     self.all.add(m)
                     self.enemies.add(m)
                     self.score += rd.randint(5,20)
                     self.accuracy[0] += 1
 
-            hits = pygame.sprite.groupcollide(self.asteroids, self.bullets, False, True)        
+            asteroid_hit = pygame.sprite.groupcollide(self.asteroids, self.bullets, False, True)        
 
             collide = pygame.sprite.spritecollide(self.player, self.asteroids, False, pygame.sprite.collide_circle)
             if collide:
@@ -328,7 +359,7 @@ class Game(object):
                     if self.level != newlevel:
                         self.level += 1
                         for _ in range(self.level):
-                            m = Alien("beholder1.png", "beholder2.png")
+                            m = Alien()
                             self.all.add(m)
                             self.enemies.add(m)
                     
@@ -361,7 +392,6 @@ class Game(object):
             self.all.draw(SCREEN)
             pygame.display.flip()
         
-        print(self.score) 
         global SCORE 
         SCORE = self.score
 
