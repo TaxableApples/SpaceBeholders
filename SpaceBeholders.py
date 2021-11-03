@@ -108,7 +108,7 @@ class Alien(pygame.sprite.Sprite):
             self.penalty = rd.randint(5,20)
             self.rec = self.image.get_rect()
             self.rect.x = rd.randrange(0, WIDTH - self.rect.width)
-            self.rect.y = rd.randrange(-100, -40)
+            self.rect.y = rd.randrange(-600, -300)
             self.speedy = rd.randrange(1, 8)
             PENALTY.append(self.penalty)
             #self.kill()
@@ -212,6 +212,8 @@ class Game(object):
         self.deaths = -1
         self.level = 4
         self.timer = 20.00
+        self.accuracy = [0,0]
+        self.acccalc = 0
 
         self.spawn = pygame.USEREVENT + 1
         self.clock = pygame.time.Clock()
@@ -263,6 +265,7 @@ class Game(object):
                     self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, GREEN)
                     self.all.add(self.bullet)
                     self.bullets.add(self.bullet)
+                    self.accuracy[1] += 1
 
             self.all.update()
 
@@ -274,6 +277,7 @@ class Game(object):
                     self.all.add(m)
                     self.enemies.add(m)
                     self.score += rd.randint(5,20)
+                    self.accuracy[0] += 1
 
             hits = pygame.sprite.groupcollide(self.asteroids, self.bullets, False, True)        
 
@@ -311,7 +315,10 @@ class Game(object):
                         if e.type == pygame.KEYDOWN:
                             levelup = False
                     pygame.display.flip()
-                  
+            
+            if self.accuracy[1] != 0:
+                self.acccalc = self.accuracy[0] * 1.0 / self.accuracy[1]*100
+
             # Draw
             SCREEN.fill(BLACK)
             SCREEN.blit(self.space.image,self.space.rect)
@@ -326,7 +333,8 @@ class Game(object):
             if self.timer < 3.0:
                 GAMEFONT.render_to(SCREEN, (500,300), str(int(self.timer)), RED, None, size=40)
             if DEBUG:
-                GAMEFONT.render_to(SCREEN, (700,600), "Enemies: " + str(len(self.enemies)), RED, None, size=18)    
+                GAMEFONT.render_to(SCREEN, (700,600), "Enemies: " + str(len(self.enemies)), RED, None, size=18)
+                GAMEFONT.render_to(SCREEN, (700,650), "Accuracy: " + str(round(self.acccalc, 2)) + "%", RED, None, size=18)    
 
             self.all.draw(SCREEN)
             pygame.display.flip()
