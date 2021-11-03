@@ -255,7 +255,6 @@ class Game(object):
                 self.timer = 20.00
 
             self.timer = round(self.timer - .01, 2)
-            #self.timer = round((90000-pygame.time.get_ticks())/1000%60, 1)
 
             self.random = rd.randint(1,10000)
 
@@ -356,7 +355,8 @@ class Game(object):
                 GAMEFONT.render_to(SCREEN, (500,300), str(int(self.timer)), RED, None, size=40)
             if DEBUG:
                 GAMEFONT.render_to(SCREEN, (700,600), "Enemies: " + str(len(self.enemies)), RED, None, size=18)
-                GAMEFONT.render_to(SCREEN, (700,650), "Accuracy: " + str(round(self.acccalc, 2)) + "%", RED, None, size=18)    
+                GAMEFONT.render_to(SCREEN, (700,650), "Accuracy: " + str(round(self.acccalc, 2)) + "%", RED, None, size=18)
+                GAMEFONT.render_to(SCREEN, (700,700), str(self.clock), RED, None, size=18)    
 
             self.all.draw(SCREEN)
             pygame.display.flip()
