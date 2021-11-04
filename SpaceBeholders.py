@@ -129,7 +129,7 @@ class Alien(pygame.sprite.Sprite):
             self.speedx = -self.speedx
 
 class AlienDeath(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, x, y, timer):
         pygame.sprite.Sprite.__init__(self)
         self.last_update = pygame.time.get_ticks()
         self.image1 = Aliensheet().get_image(2,0)
