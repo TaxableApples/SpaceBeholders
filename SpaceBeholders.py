@@ -260,9 +260,9 @@ class Game(object):
         self.player = Player("ship2.png")
         self.cursor = Cursor("cursor.png")
         self.healthbar = Healthbar("healthbar.png", "health.png", [5,5])
-        #self.shooting = False
-        #self.bullet_timer = 0
-        #self.shoot_if = 0
+        self.shooting = False
+        self.bullet_timer = 0.5
+        self.shoot_if = 0
 
         self.all.add(self.player)
         self.all.add(self.cursor)
@@ -281,6 +281,8 @@ class Game(object):
             if self.timer < 0.0:
                 self.timer = 20.00
 
+            self.bullet_timer -= 0.025
+
             self.timer = round(self.timer - .01, 2)
 
             self.random = rd.randint(1,10000)
@@ -291,33 +293,26 @@ class Game(object):
                 self.all.add(self.asteroid)
 
             # Control
-
-            #self.bullet_if = self.clock.tick(FPS)/1000
-
             for e in pygame.event.get():
                 if e.type == pygame.KEYDOWN:
                     if e.key == K_ESCAPE:
                         self.running = False
 
                 if e.type == pygame.MOUSEBUTTONDOWN:
-                    #self.bullet_timer = 0
-                    #self.shooting = True
-                    self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, GREEN)
-                    self.all.add(self.bullet)
-                    self.bullets.add(self.bullet)
-                    self.accuracy[1] += 1
+                    self.bullet_timer = 0
+                    self.shooting = True
                 
                 if e.type == pygame.MOUSEBUTTONUP:
                     self.shooting = False
 
-                #if self.shooting:
-                    #self.bullet_timer -= self.bullet_if
-                    # if self.bullet_timer <= 0:
-                    #     self.bullet_timer = 0.5
-                    #     self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, GREEN)
-                    #     self.all.add(self.bullet)
-                    #     self.bullets.add(self.bullet)
-                    #     self.accuracy[1] += 1
+                if self.shooting:
+                    self.bullet_timer -= self.shoot_if
+                    if self.bullet_timer <= 0:
+                        self.bullet_timer = 0.5
+                        self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, GREEN)
+                        self.all.add(self.bullet)
+                        self.bullets.add(self.bullet)
+                        self.accuracy[1] += 1
 
             self.all.update()
 
