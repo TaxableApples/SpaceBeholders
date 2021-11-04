@@ -1,3 +1,4 @@
+from operator import xor
 import pygame
 import pygame.freetype
 from pygame.locals import *
@@ -81,7 +82,7 @@ class Aliensheet():
     def __init__(self):
         self.sheet = pygame.image.load(path.join(IMG_FOLDER,'beholder.png')).convert_alpha()
 
-    def get_image(self, frame, row):
+    def get_image(self, row, frame):
         image = pygame.Surface((100, 100)).convert_alpha()
         image.blit(self.sheet, (0,0), ((frame * 100), (row * 100), 100, 100))
         image.set_colorkey(WHITE)
@@ -92,7 +93,7 @@ class Alien(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         self.image1 = Aliensheet().get_image(0,0)
-        self.image2 = Aliensheet().get_image(1,0)
+        self.image2 = Aliensheet().get_image(0,1)
         self.image = self.image1
         self.rect = self.image.get_rect()
         self.radius = 44
@@ -105,7 +106,7 @@ class Alien(pygame.sprite.Sprite):
     
     def update_image(self):
         now = pygame.time.get_ticks()
-        #print(str(now) + " " + str(self.last_update) + " " + str(now-self.last_update))
+
         if now - self.last_update > 80:
             if self.image == self.image1:
                 self.image = self.image2
@@ -117,31 +118,56 @@ class Alien(pygame.sprite.Sprite):
         self.update_image()
         self.rect.y += self.speedy
         self.rect.x += self.speedx
+
         if self.rect.top > HEIGHT + 10:
             self.penalty = rd.randint(5,20)
-            self.rec = self.image.get_rect()
+            #self.rec = self.image.get_rect()
             self.rect.x = rd.randrange(0, WIDTH - self.rect.width)
             self.rect.y = rd.randrange(-600, -300)
             self.speedy = rd.randrange(1, 8)
             PENALTY.append(self.penalty)
-            #self.kill()
+
         if self.rect.left < 0 or self.rect.right > WIDTH:
             self.speedx = -self.speedx
 
 class AlienDeath(pygame.sprite.Sprite):
-    def __init__(self, x, y, timer):
+    def __init__(self, x, y, velx, vely):
         pygame.sprite.Sprite.__init__(self)
-        self.last_update = pygame.time.get_ticks()
-        self.image1 = Aliensheet().get_image(2,0)
-        self.image2 = Aliensheet().get_image(3,0)
-        self.image3 = Aliensheet().get_image(1,1)
-        self.image4 = Aliensheet().get_image(3,1)
-        self.image5 = Aliensheet().get_image(4,1)
-        self.image6 = Aliensheet().get_image(5,1)
+        
+        self.image1 = Aliensheet().get_image(0,2)
+        self.image2 = Aliensheet().get_image(0,3)
+        self.image3 = Aliensheet().get_image(1,0)
+        self.image4 = Aliensheet().get_image(1,1)
+        self.image5 = Aliensheet().get_image(1,2)
+        self.image6 = Aliensheet().get_image(1,3)
         self.image = self.image1
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.timer = 30
+        self.speedx = velx
+        self.speedy = vely
 
     def update(self):
-        self.image = self.image1
+        self.rect.y += self.speedy
+        self.rect.x += self.speedx
+
+        self.timer -= 1.5
+        if self.timer <= 29:
+            self.image = self.image1
+        if self.timer <= 25:
+            self.image = self.image2
+        if self.timer <= 20:
+            self.image = self.image3
+        if self.timer <= 15:
+            self.image = self.image4
+        if self.timer <= 10:
+            self.image = self.image5
+        if self.timer <= 5:
+            self.image = self.image6
+        if self.timer <= 0:
+            self.kill()
+            
 
 class Asteroid(pygame.sprite.Sprite):
     def __init__(self, x):
@@ -318,13 +344,17 @@ class Game(object):
 
             # Collisions
             hits = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
-            for _ in hits:
+            for sprite in hits:
+                if dict[sprite]:
+                    d = AlienDeath(sprite.rect.x, sprite.rect.y, sprite.speedx, sprite.speedy)
+                    self.all.add(d)
+                    self.score += rd.randint(5,20)
+                    self.accuracy[0] += 1
+                    
                 if self.timer > 5.0 and len(self.enemies) <= self.level:
                     m = Alien()
                     self.all.add(m)
                     self.enemies.add(m)
-                    self.score += rd.randint(5,20)
-                    self.accuracy[0] += 1
 
             asteroid_hit = pygame.sprite.groupcollide(self.asteroids, self.bullets, False, True)        
 
@@ -389,6 +419,9 @@ class Game(object):
         
         global SCORE 
         SCORE = self.score
+
+# class Deathscreen(object):
+#     def __init__(self):
 
 def main():
     pygame.init()
