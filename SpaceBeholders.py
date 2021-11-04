@@ -248,7 +248,7 @@ class Background(pygame.sprite.Sprite):
 class Splashscreen(object):
     def __init__(self):
         self.running = True
-        self.logo = pygame.image.load(path.join(IMG_FOLDER, "beholder1.png"))
+        self.logo = Aliensheet().get_image(0,0)
         self.logo.set_colorkey(WHITE)
 
     def run(self):
