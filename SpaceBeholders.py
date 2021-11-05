@@ -20,6 +20,8 @@ YELLOW = (255, 255, 0)
 LEVEL = 4
 DEBUG = True
 PENALTY = [0]
+ACCBONUS = 0
+SCORE = 0
 
 GAME_FOLDER = path.dirname(__file__)
 RESOURCES_FOLDER = path.join(GAME_FOLDER, "resources")
@@ -28,7 +30,7 @@ IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
 # ALIEN_SHEET_IMAGE = pygame.image.load(path.join(IMG_FOLDER,'beholder.png')).convert_alpha()
 # ALIEN_SHEET = Aliensheet(ALIEN_SHEET_IMAGE)
 
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN, 32)
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "AlloyInk.ttf"), 22)
 
 class Player(pygame.sprite.Sprite):
@@ -218,6 +220,50 @@ class Bullet(pygame.sprite.Sprite):
         if self.rect.right > 1024:
             self.kill()
 
+class Explosionsheet():
+    def __init__(self):
+        self.sheet = pygame.image.load(path.join(IMG_FOLDER,'explosion_01_strip13.png')).convert_alpha()
+
+    def get_image(self, row, frame):
+        image = pygame.Surface((100, 100)).convert_alpha()
+        image.blit(self.sheet, (0,0), ((frame * 100), (row * 100), 100, 100))
+        image.set_colorkey(BLACK)
+
+        return image
+
+class Explosion(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        
+        self.image1 = Explosionsheet().get_image(0,0)
+        self.image2 = Explosionsheet().get_image(0,1)
+        self.image3 = Explosionsheet().get_image(0,2)
+        self.image4 = Explosionsheet().get_image(0,3)
+        self.image5 = Explosionsheet().get_image(0,4)
+        self.image6 = Explosionsheet().get_image(0,5)
+        self.image = self.image1
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.timer = 30
+
+    def update(self):
+        self.timer -= 1.5
+        if self.timer <= 29:
+            self.image = self.image1
+        if self.timer <= 25:
+            self.image = self.image2
+        if self.timer <= 20:
+            self.image = self.image3
+        if self.timer <= 15:
+            self.image = self.image4
+        if self.timer <= 10:
+            self.image = self.image5
+        if self.timer <= 5:
+            self.image = self.image6
+        if self.timer <= 0:
+            self.kill()
+
 class Cursor(pygame.sprite.Sprite):
     def __init__(self, file):
         pygame.sprite.Sprite.__init__(self)
@@ -248,7 +294,7 @@ class Background(pygame.sprite.Sprite):
 class Splashscreen(object):
     def __init__(self):
         self.running = True
-        self.logo = pygame.image.load(path.join(IMG_FOLDER, "beholder1.png"))
+        self.logo = Aliensheet().get_image(0,0)
         self.logo.set_colorkey(WHITE)
 
     def run(self):
@@ -258,7 +304,7 @@ class Splashscreen(object):
                     self.running = False
                     pygame.time.set_timer(pygame.KEYDOWN, 0)
 
-            SCREEN.fill(0)
+            SCREEN.fill(BLACK)
             SCREEN.blit(self.logo, (440, 200))
             GAMEFONT.render_to(SCREEN, (210 ,HEIGHT / 2), "SPACE BEHOLDERS", RED, None, size=64)
             GAMEFONT.render_to(SCREEN, (370 , 500), "Press Any Key to Play", RED, None, size=22)
@@ -323,6 +369,10 @@ class Game(object):
                 if e.type == pygame.KEYDOWN:
                     if e.key == K_ESCAPE:
                         self.running = False
+                        global QUIT
+                        QUIT = True
+                    else:
+                        QUIT = False
 
                 if e.type == pygame.MOUSEBUTTONDOWN:
                     self.bullet_timer = 0
@@ -361,6 +411,13 @@ class Game(object):
             collide = pygame.sprite.spritecollide(self.player, self.asteroids, False, pygame.sprite.collide_circle)
             if collide:
                 self.player.health -= rd.randint(5,20)
+            
+            for sprite in collide:
+                if dict[sprite]:
+                    ex = (sprite.rect.x + self.player.rect.x) / 2    
+                    ey = (sprite.rect.y + self.player.rect.y) / 2
+                    e = Explosion(ex, ey)
+                    self.all.add(e)
 
             collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
             if collide:
@@ -381,6 +438,7 @@ class Game(object):
                     SCREEN.fill(BLACK)
                     GAMEFONT.render_to(SCREEN, (100,470), "Press Any Key to Continue to Level: " + str(self.level - 3), RED, None, size=40)
                     GAMEFONT.render_to(SCREEN, (400,550), "SCORE: " + str(self.score), RED, None, size=40)
+                    
                     if self.level != newlevel:
                         self.level += 1
                         for _ in range(self.level):
@@ -418,10 +476,10 @@ class Game(object):
             pygame.display.flip()
         
         global SCORE 
-        SCORE = self.score
+        SCORE = self.score  
 
-# class Deathscreen(object):
-#     def __init__(self):
+        global ACCBONUS
+        ACCBONUS = self.acccalc * 10 * (self.level - 3)
 
 def main():
     pygame.init()
@@ -429,34 +487,62 @@ def main():
     splash = True
     game = True 
     running = True
-    
-    
+    timer = 2000
+    firstrun = True
+
     pygame.display.set_caption("SPACE BEHOLDERS")
     pygame.mouse.set_visible(False)
     pygame.event.set_grab(True)
     
     while running:
-        if splash: Splashscreen().run()
+        if splash: 
+            Splashscreen().run()      
         splash = False
 
-        if game: Game().run()
+        if game: 
+            Game().run()     
         game = False
+
+        if firstrun:
+            score = SCORE
+            accbonus = ACCBONUS
+            firstrun = False
+
+        SCREEN.fill(BLACK)
+        
+        if timer <=0:
+            GAMEFONT.render_to(SCREEN, (390,410), "Press 'esc' to quit", RED, None, size=20)
+            GAMEFONT.render_to(SCREEN, (340,450), "Press 'any key' to continue", RED, None, size=20)
+        else:
+            timer -= 1
 
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
-                running = False
+                if timer <=0:
+                    running = False
+
             if e.type == pygame.KEYDOWN:
                 if e.key == K_ESCAPE:
-                    running = False
+                        running = False
                 else:
-                    splash = True
-                    game = True
-                    
-        SCREEN.fill(BLACK)
-        GAMEFONT.render_to(SCREEN, (370,300), "Did you die?", RED, None, size=40)
-        GAMEFONT.render_to(SCREEN, (350,350), "Final Score: " + str(SCORE), RED, None, size=40) 
-        GAMEFONT.render_to(SCREEN, (390,410), "Press 'esc' to quit", RED, None, size=20)
-        GAMEFONT.render_to(SCREEN, (340,450), "Press 'any key' to continue", RED, None, size=20)
+                    if timer <=0:
+                        firstrun = True
+                        timer = 2000
+                        splash = True
+                        game = True           
+
+        if QUIT:
+            final_message = "You Quit!"
+        else:
+            final_message = "You Died!"
+        
+        if timer < 1500 and accbonus >= 0:
+            accbonus -= 1
+            score += 1
+        
+        GAMEFONT.render_to(SCREEN, (400,300), final_message, RED, None, size=40)
+        GAMEFONT.render_to(SCREEN, (350,350), "Final Score: " + str(score), RED, None, size=40)
+
         pygame.display.flip()
 
     pygame.quit()
