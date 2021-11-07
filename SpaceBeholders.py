@@ -27,7 +27,7 @@ HEALTHBAR_IMG = "healthbar.png"
 HEALTH_IMG = "health.png"
 BULLET_IMG = "bullet.png"
 
-DEBUG = True
+DEBUG = False
 PENALTY = [0]
 ACCBONUS = 0
 SCORE = 0
