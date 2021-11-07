@@ -215,6 +215,8 @@ class SpaceDebris(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.y += self.speed
+        if self.rect.top > HEIGHT + 10:
+            self.kill()
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, image):
@@ -337,6 +339,7 @@ class Splashscreen(object):
             GAMEFONT.render_to(SCREEN, (210 ,HEIGHT / 2), "SPACE BEHOLDERS", RED, None, size=64)
             GAMEFONT.render_to(SCREEN, (370 , 500), "Press Any Key to Play", RED, None, size=22)
             GAMEFONT.render_to(SCREEN, (190 , 600), "Use Mouse to aim and shoot, Use keys A,S,D,W to fly", RED, None, size=22)
+            GAMEFONT.render_to(SCREEN, (330, 650), "Press the Spacebar to pause", RED, None, size=22)
             pygame.display.flip()
 
 class Game(object):
@@ -348,6 +351,9 @@ class Game(object):
         self.timer = 00
         self.accuracy = [0,0]
         self.acccalc = 0
+        self.pause = False
+        self.start_timer = 5.0
+        self.start = True
 
         self.spawn = pygame.USEREVENT + 1
         self.clock = pygame.time.Clock()
@@ -357,6 +363,7 @@ class Game(object):
         self.asteroids = pygame.sprite.Group()
         self.fx = pygame.sprite.Group()
         self.debris = pygame.sprite.Group()
+        self.ship = pygame.sprite.Group()
 
         #self.space = Background(BACKGROUND_IMG, [0,0])
         self.player = Player(SHIP_IMG)
@@ -365,21 +372,40 @@ class Game(object):
         self.shooting = False
         self.bullet_timer = 0.5
         self.shoot_if = 0
-
+        
         self.all.add(self.player)
         self.all.add(self.cursor)
-
-        for _ in range(self.level):
-            self.m = Alien()
-            self.all.add(self.m)
-            self.enemies.add(self.m)
 
     def restart(self):
         pygame.time.set_timer(self.spawn, 1000 - self.score * 2)
 
     def run(self):
         while self.running:
+            
+            if self.start:
+                # while self.start_timer > 0:
+                        # self.clock.tick(FPS)
+                        # SCREEN.fill(BLACK)
+
+                        # self.newdebris = SpaceDebris()
+                        # self.debris.add(self.newdebris)
+                        # self.all.add(self.newdebris)
+
+                        # self.all.update()
+                        # self.all.draw(SCREEN)
+
+                        # self.start_timer = round(self.start_timer - .01, 2)
+                        # pygame.display.flip()
+
+                self.start = False
+
+                for _ in range(self.level):
+                    self.m = Alien()
+                    self.all.add(self.m)
+                    self.enemies.add(self.m)
+
             self.clock.tick(FPS)
+
             if self.timer < 0.0:
                 self.timer = 20.00
 
@@ -403,6 +429,8 @@ class Game(object):
                         QUIT = True
                     else:
                         QUIT = False
+                    if e.key == K_SPACE:
+                        self.pause = True
 
                 if e.type == pygame.MOUSEBUTTONDOWN:
                     self.bullet_timer = 0
@@ -421,6 +449,12 @@ class Game(object):
                         self.accuracy[1] += 1
 
             self.all.update()
+
+            while self.pause:
+                for e in pygame.event.get():
+                    if e.type == pygame.KEYDOWN:
+                        self.pause = False
+
 
             # Collisions
             hits = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
@@ -500,7 +534,7 @@ class Game(object):
             if self.timer < 3.0:
                 GAMEFONT.render_to(SCREEN, (500,300), str(int(self.timer)), RED, None, size=40)
 
-            if int(self.clock.get_fps()) > 60:
+            if int(self.clock.get_fps()) > 58:
                 self.newdebris = SpaceDebris()
                 self.debris.add(self.newdebris)
                 self.all.add(self.newdebris)
