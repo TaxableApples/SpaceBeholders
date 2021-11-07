@@ -17,7 +17,16 @@ RED = (255,0,0)
 GREEN = (0,255,0)
 YELLOW = (255, 255, 0)
 
-LEVEL = 4
+BEHOLDER_IMG = "beholder.png"
+ASTEROID_IMG = "asteroid2.png"
+EXPLOSION_A = "explosion_01.png"
+#BACKGROUND_IMG = "space.png"
+SHIP_IMG = "ship.png"
+CURSOR_IMG = "cursor.png"
+HEALTHBAR_IMG = "healthbar.png"
+HEALTH_IMG = "health.png"
+BULLET_IMG = "bullet.png"
+
 DEBUG = True
 PENALTY = [0]
 ACCBONUS = 0
@@ -26,9 +35,6 @@ SCORE = 0
 GAME_FOLDER = path.dirname(__file__)
 RESOURCES_FOLDER = path.join(GAME_FOLDER, "resources")
 IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
-
-# ALIEN_SHEET_IMAGE = pygame.image.load(path.join(IMG_FOLDER,'beholder.png')).convert_alpha()
-# ALIEN_SHEET = Aliensheet(ALIEN_SHEET_IMAGE)
 
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN, 32)
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "AlloyInk.ttf"), 22)
@@ -40,7 +46,7 @@ class Player(pygame.sprite.Sprite):
         self.backup_image = self.image
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
-        self.radius = 44
+        self.radius = 42
         self.rect.center = (WIDTH / 2, HEIGHT - 20)
         self.speedx = 0
         self.speedy = 0
@@ -82,10 +88,10 @@ class Player(pygame.sprite.Sprite):
 
 class Aliensheet():
     def __init__(self):
-        self.sheet = pygame.image.load(path.join(IMG_FOLDER,'beholder.png')).convert_alpha()
+        self.sheet = pygame.image.load(path.join(IMG_FOLDER,BEHOLDER_IMG)).convert()
 
     def get_image(self, row, frame):
-        image = pygame.Surface((100, 100)).convert_alpha()
+        image = pygame.Surface((100, 100))
         image.blit(self.sheet, (0,0), ((frame * 100), (row * 100), 100, 100))
         image.set_colorkey(WHITE)
 
@@ -170,12 +176,10 @@ class AlienDeath(pygame.sprite.Sprite):
         if self.timer <= 0:
             self.kill()
             
-
 class Asteroid(pygame.sprite.Sprite):
     def __init__(self, x):
-        pygame.sprite.Sprite.__init__(self)
-        
-        self.image = pygame.image.load(path.join(IMG_FOLDER, "asteroid2.png"))
+        pygame.sprite.Sprite.__init__(self)  
+        self.image = pygame.image.load(path.join(IMG_FOLDER, ASTEROID_IMG)).convert()
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
         self.radius = 44
@@ -194,11 +198,31 @@ class Asteroid(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT + 10:
             self.kill()
 
-class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x, y, color):
+class SpaceDebris(pygame.sprite.Sprite):
+    def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((10,10))
-        self.image.fill(color)       
+        self.pseed = rd.randint(1, 4)
+        self.cseed = rd.randint(2, 255)
+        self.x = self.pseed
+        self.y = self.pseed
+        self.speed = rd.randrange(8, 12)
+        self.image = pygame.Surface((self.x, self.y))
+        self.image.fill((self.cseed, self.cseed, self.cseed))
+        self.rect = self.image.get_rect()
+        self.rect.y = -100
+        self.rect.x = rd.randint(0, WIDTH)
+        self._layer = -1
+
+    def update(self):
+        self.rect.y += self.speed
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x, y, image):
+        pygame.sprite.Sprite.__init__(self)
+        #self.image = pygame.Surface((10,10))
+        self.image = pygame.image.load(path.join(IMG_FOLDER, image)).convert()
+        self.image.set_colorkey(BLACK)     
+        self.radius = 4.5
         self.rect = self.image.get_rect()
         self.rect.centery = y
         self.rect.centerx = x
@@ -222,11 +246,11 @@ class Bullet(pygame.sprite.Sprite):
 
 class Explosionsheet():
     def __init__(self):
-        self.sheet = pygame.image.load(path.join(IMG_FOLDER,'explosion_01_strip13.png')).convert_alpha()
+        self.sheet = pygame.image.load(path.join(IMG_FOLDER, EXPLOSION_A)).convert()
 
-    def get_image(self, row, frame):
-        image = pygame.Surface((100, 100)).convert_alpha()
-        image.blit(self.sheet, (0,0), ((frame * 100), (row * 100), 100, 100))
+    def get_image(self, frame):
+        image = pygame.Surface((100, 100))
+        image.blit(self.sheet, (0,0), ((frame * 100), 0, 100, 100))
         image.set_colorkey(BLACK)
 
         return image
@@ -235,12 +259,16 @@ class Explosion(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         
-        self.image1 = Explosionsheet().get_image(0,0)
-        self.image2 = Explosionsheet().get_image(0,1)
-        self.image3 = Explosionsheet().get_image(0,2)
-        self.image4 = Explosionsheet().get_image(0,3)
-        self.image5 = Explosionsheet().get_image(0,4)
-        self.image6 = Explosionsheet().get_image(0,5)
+        self.image1 = Explosionsheet().get_image(0)
+        self.image2 = Explosionsheet().get_image(1)
+        self.image3 = Explosionsheet().get_image(2)
+        self.image4 = Explosionsheet().get_image(3)
+        self.image5 = Explosionsheet().get_image(4)
+        self.image6 = Explosionsheet().get_image(5)
+        self.image7 = Explosionsheet().get_image(7)
+        self.image8 = Explosionsheet().get_image(8)
+        self.image9 = Explosionsheet().get_image(9)
+        self.image10 = Explosionsheet().get_image(10)
         self.image = self.image1
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -249,11 +277,11 @@ class Explosion(pygame.sprite.Sprite):
 
     def update(self):
         self.timer -= 1.5
-        if self.timer <= 29:
-            self.image = self.image1
         if self.timer <= 25:
-            self.image = self.image2
+            self.image = self.image1
         if self.timer <= 20:
+            self.image = self.image2
+        if self.timer <= 40:
             self.image = self.image3
         if self.timer <= 15:
             self.image = self.image4
@@ -284,12 +312,12 @@ class Healthbar(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.left, self.rect.top = loc
 
-class Background(pygame.sprite.Sprite):
-    def __init__(self, img, loc):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load(path.join(IMG_FOLDER, img)).convert()
-        self.rect = self.image.get_rect()
-        self.rect.left, self.rect.top = loc
+# class Background(pygame.sprite.Sprite):
+#     def __init__(self, img, loc):
+#         pygame.sprite.Sprite.__init__(self)
+#         self.image = pygame.image.load(path.join(IMG_FOLDER, img)).convert()
+#         self.rect = self.image.get_rect()
+#         self.rect.left, self.rect.top = loc
 
 class Splashscreen(object):
     def __init__(self):
@@ -317,7 +345,7 @@ class Game(object):
         self.score = 0
         self.deaths = -1
         self.level = 4
-        self.timer = 20.00
+        self.timer = 00
         self.accuracy = [0,0]
         self.acccalc = 0
 
@@ -327,11 +355,13 @@ class Game(object):
         self.enemies = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
         self.asteroids = pygame.sprite.Group()
+        self.fx = pygame.sprite.Group()
+        self.debris = pygame.sprite.Group()
 
-        self.space = Background("space.png", [0,0])
-        self.player = Player("ship2.png")
-        self.cursor = Cursor("cursor.png")
-        self.healthbar = Healthbar("healthbar.png", "health.png", [5,5])
+        #self.space = Background(BACKGROUND_IMG, [0,0])
+        self.player = Player(SHIP_IMG)
+        self.cursor = Cursor(CURSOR_IMG)
+        self.healthbar = Healthbar(HEALTHBAR_IMG, HEALTH_IMG, [5,5])
         self.shooting = False
         self.bullet_timer = 0.5
         self.shoot_if = 0
@@ -385,7 +415,7 @@ class Game(object):
                     self.bullet_timer -= self.shoot_if
                     if self.bullet_timer <= 0:
                         self.bullet_timer = 0.5
-                        self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, GREEN)
+                        self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, BULLET_IMG)
                         self.all.add(self.bullet)
                         self.bullets.add(self.bullet)
                         self.accuracy[1] += 1
@@ -405,8 +435,8 @@ class Game(object):
                     m = Alien()
                     self.all.add(m)
                     self.enemies.add(m)
-
-            asteroid_hit = pygame.sprite.groupcollide(self.asteroids, self.bullets, False, True)        
+      
+            asteroid_hit = pygame.sprite.groupcollide(self.asteroids, self.bullets, False, True)
 
             collide = pygame.sprite.spritecollide(self.player, self.asteroids, False, pygame.sprite.collide_circle)
             if collide:
@@ -418,6 +448,7 @@ class Game(object):
                     ey = (sprite.rect.y + self.player.rect.y) / 2
                     e = Explosion(ex, ey)
                     self.all.add(e)
+                    self.fx.add(e)
 
             collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
             if collide:
@@ -456,23 +487,36 @@ class Game(object):
 
             # Draw
             SCREEN.fill(BLACK)
-            SCREEN.blit(self.space.image,self.space.rect)
+            #SCREEN.blit(self.space.image,self.space.rect)
             SCREEN.blit(self.healthbar.image,(5,5))
             for i in range(self.player.health):
                 SCREEN.blit(self.healthbar.health, (i+8,8))
 
             GAMEFONT.render_to(SCREEN, (875,15), "'Esc' to Quit", RED, None, size=18)
-            GAMEFONT.render_to(SCREEN, (500,700), "Score: " + str(self.score), RED, None, size=18)            
-            GAMEFONT.render_to(SCREEN, (500,650), "Level: " + str(self.level - 3), RED, None, size=18)
-            GAMEFONT.render_to(SCREEN, (500,600), "Round: " + str(self.timer), RED, None, size=18)            
+            GAMEFONT.render_to(SCREEN, (200,700), "Score: " + str(self.score), RED, None, size=18)            
+            GAMEFONT.render_to(SCREEN, (10,700), "Level: " + str(self.level - 3), RED, None, size=18)
+            GAMEFONT.render_to(SCREEN, (400,700), "Round: " + str(self.timer), RED, None, size=18) 
+            GAMEFONT.render_to(SCREEN, (700,700), "Accuracy: " + str(round(self.acccalc, 2)) + "%", RED, None, size=18)          
             if self.timer < 3.0:
                 GAMEFONT.render_to(SCREEN, (500,300), str(int(self.timer)), RED, None, size=40)
-            if DEBUG:
-                GAMEFONT.render_to(SCREEN, (700,600), "Enemies: " + str(len(self.enemies)), RED, None, size=18)
-                GAMEFONT.render_to(SCREEN, (700,650), "Accuracy: " + str(round(self.acccalc, 2)) + "%", RED, None, size=18)
-                GAMEFONT.render_to(SCREEN, (700,700), str(self.clock), RED, None, size=18)    
+
+            if int(self.clock.get_fps()) > 60:
+                self.newdebris = SpaceDebris()
+                self.debris.add(self.newdebris)
+                self.all.add(self.newdebris)
 
             self.all.draw(SCREEN)
+
+            if DEBUG:
+                pygame.draw.circle(SCREEN, GREEN, (self.player.rect.centerx, self.player.rect.centery), 42, 1)
+                for sprite in self.asteroids:
+                    pygame.draw.circle(SCREEN, RED, (sprite.rect.centerx, sprite.rect.centery), 44, 1)
+                for sprite in self.enemies:
+                    pygame.draw.circle(SCREEN, RED, (sprite.rect.centerx, sprite.rect.centery), 44, 1)
+                GAMEFONT.render_to(SCREEN, (250,10), "DEBUG MODE ON", RED, None, size=18)
+                GAMEFONT.render_to(SCREEN, (10,650), "Enemies: " + str(len(self.enemies)), RED, None, size=18)   
+                GAMEFONT.render_to(SCREEN, (700,650), str(self.clock), RED, None, size=18)
+
             pygame.display.flip()
         
         global SCORE 
