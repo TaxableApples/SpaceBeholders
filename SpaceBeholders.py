@@ -31,13 +31,28 @@ DEBUG = False
 PENALTY = [0]
 ACCBONUS = 0
 SCORE = 0
+SOUND = 1
 
 GAME_FOLDER = path.dirname(__file__)
 RESOURCES_FOLDER = path.join(GAME_FOLDER, "resources")
 IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
+SOUND_FOLDER = path.join(RESOURCES_FOLDER, "audio")
 
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN, 32)
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "AlloyInk.ttf"), 22)
+
+pygame.init()
+
+try:
+    pygame.mixer.init()
+except:
+    SOUND = 0
+    print("no sound card error")
+
+# sounds
+if SOUND > 0: 
+    enemy_explosion = pygame.mixer.Sound(path.join(SOUND_FOLDER, 'explosion.ogg'))
+    laser_shoot = pygame.mixer.Sound(path.join(SOUND_FOLDER, 'shoot.ogg'))
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, img):
@@ -159,7 +174,6 @@ class AlienDeath(pygame.sprite.Sprite):
     def update(self):
         self.rect.y += self.speedy
         self.rect.x += self.speedx
-
         self.timer -= 1.5
         if self.timer <= 29:
             self.image = self.image1
@@ -446,6 +460,8 @@ class Game(object):
                         self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, BULLET_IMG)
                         self.all.add(self.bullet)
                         self.bullets.add(self.bullet)
+                        if SOUND > 0: 
+                            pygame.mixer.Sound.play(laser_shoot)
                         self.accuracy[1] += 1
 
             self.all.update()
@@ -461,6 +477,8 @@ class Game(object):
             for sprite in hits:
                 if dict[sprite]:
                     d = AlienDeath(sprite.rect.x, sprite.rect.y, sprite.speedx, sprite.speedy)
+                    if SOUND > 0: 
+                        pygame.mixer.Sound.play(enemy_explosion)
                     self.all.add(d)
                     self.score += rd.randint(5,20)
                     self.accuracy[0] += 1
@@ -560,8 +578,6 @@ class Game(object):
         ACCBONUS = self.acccalc * 10 * (self.level - 3)
 
 def main():
-    pygame.init()
-    #pygame.mixer.init() #breaks when user device doesn't have a sound card installed...
     splash = True
     game = True 
     running = True
