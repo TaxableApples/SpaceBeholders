@@ -47,12 +47,14 @@ try:
     pygame.mixer.init()
 except:
     SOUND = 0
-    print("no sound card error")
+    print("no sound card installed!")
 
 # sounds
 if SOUND > 0: 
-    enemy_explosion = pygame.mixer.Sound(path.join(SOUND_FOLDER, 'explosion.ogg'))
-    laser_shoot = pygame.mixer.Sound(path.join(SOUND_FOLDER, 'shoot.ogg'))
+    enemy_explosion = pygame.mixer.Sound(path.join(SOUND_FOLDER, "explosion.ogg"))
+    laser_shoot = pygame.mixer.Sound(path.join(SOUND_FOLDER, "shoot.ogg"))
+    pygame.mixer.music.load(path.join(SOUND_FOLDER,"space track.ogg"))
+    pygame.mixer.music.play(loops = -1)
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, img):
@@ -461,7 +463,7 @@ class Game(object):
                         self.all.add(self.bullet)
                         self.bullets.add(self.bullet)
                         if SOUND > 0: 
-                            pygame.mixer.Sound.play(laser_shoot)
+                            pygame.mixer.Channel(0).play(laser_shoot)
                         self.accuracy[1] += 1
 
             self.all.update()
@@ -478,7 +480,7 @@ class Game(object):
                 if dict[sprite]:
                     d = AlienDeath(sprite.rect.x, sprite.rect.y, sprite.speedx, sprite.speedy)
                     if SOUND > 0: 
-                        pygame.mixer.Sound.play(enemy_explosion)
+                        pygame.mixer.Channel(1).play(enemy_explosion)
                     self.all.add(d)
                     self.score += rd.randint(5,20)
                     self.accuracy[0] += 1
