@@ -9,7 +9,7 @@ from os import path
 
 pygame.freetype.init();
 
-WIDTH, HEIGHT = 160, 120
+WIDTH, HEIGHT = 1024, 768
 FPS = 60
 BLACK = (0,0,0)
 WHITE = (255,255,255)
@@ -39,7 +39,7 @@ IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
 SOUND_FOLDER = path.join(RESOURCES_FOLDER, "audio")
 
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN)
-GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "AlloyInk.ttf"), 22)
+GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "Retro Gaming.ttf"), 22)
 
 pygame.init()
 pygame.event.set_grab(True)
@@ -58,12 +58,14 @@ if SOUND > 0:
     pygame.mixer.music.play(loops = -1)
 
 class Playersheet():
-    def __init__(self):
-        self.sheet = pygame.image.load(path.join(IMG_FOLDER,SHIP_IMG)).convert()
+    def __init__(self):        
+        self.image = pygame.image.load(path.join(IMG_FOLDER,SHIP_IMG)).convert()
+        self.size = self.image.get_size()
+        self.sheet = pygame.transform.scale(self.image, (int(self.size[0]*4), int(self.size[1]*4)))
 
     def get_image(self, row, frame):
-        image = pygame.Surface((24, 24))
-        image.blit(self.sheet, (0,0), ((frame * 24), (row * 24), 24, 24))
+        image = pygame.Surface((96, 96))
+        image.blit(self.sheet, (0,0), ((frame * 96), (row * 96), 96, 96))
         image.set_colorkey(WHITE)
 
         return image
@@ -71,21 +73,16 @@ class Playersheet():
 class Player(pygame.sprite.Sprite):
     def __init__(self, img):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load(path.join(IMG_FOLDER, img)).convert()
-        self.backup_image = Playersheet().get_image(0,0)
+        self.image = Playersheet().get_image(0,0)
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
-        self.radius = 10
+        self.radius = 44
         self.rect.center = (WIDTH / 2, HEIGHT - 20)
         self.speedx = 0
         self.speedy = 0
         self.health = 196
 
     def update(self):
-        mouse_x, mouse_y = pygame.mouse.get_pos()
-        rel_x, rel_y = mouse_x - self.rect.x, mouse_y - self.rect.y
-        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
-        self.image = pygame.transform.rotate(self.backup_image, int(angle))
         self.rect = self.image.get_rect(center=self.rect.center)
         if self.speedx > 0:
             self.speedx -= .08
@@ -117,11 +114,13 @@ class Player(pygame.sprite.Sprite):
 
 class Aliensheet():
     def __init__(self):
-        self.sheet = pygame.image.load(path.join(IMG_FOLDER,BEHOLDER_IMG)).convert()
+        self.image = pygame.image.load(path.join(IMG_FOLDER,BEHOLDER_IMG)).convert()
+        self.size = self.image.get_size()
+        self.sheet = pygame.transform.scale(self.image, (int(self.size[0]*4), int(self.size[1]*4)))
 
     def get_image(self, row, frame):
-        image = pygame.Surface((24, 24))
-        image.blit(self.sheet, (0,0), ((frame * 24), (row * 24), 24, 24))
+        image = pygame.Surface((96, 96))
+        image.blit(self.sheet, (0,0), ((frame * 96), (row * 96), 96, 96))
         image.set_colorkey(WHITE)
 
         return image
@@ -249,8 +248,9 @@ class SpaceDebris(pygame.sprite.Sprite):
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, image):
         pygame.sprite.Sprite.__init__(self)
-        #self.image = pygame.Surface((10,10))
-        self.image = pygame.image.load(path.join(IMG_FOLDER, image)).convert()
+        self.image = pygame.Surface((10,10))
+        self.image.fill(GREEN)
+        #self.image = pygame.image.load(path.join(IMG_FOLDER, image)).convert()
         self.image.set_colorkey(BLACK)     
         self.radius = 4.5
         self.rect = self.image.get_rect()
@@ -574,11 +574,11 @@ class Game(object):
             self.all.draw(SCREEN)
 
             if DEBUG:
-                pygame.draw.circle(SCREEN, GREEN, (self.player.rect.centerx, self.player.rect.centery), 42, 1)
-                for sprite in self.asteroids:
-                    pygame.draw.circle(SCREEN, RED, (sprite.rect.centerx, sprite.rect.centery), 44, 1)
-                for sprite in self.enemies:
-                    pygame.draw.circle(SCREEN, RED, (sprite.rect.centerx, sprite.rect.centery), 44, 1)
+                #pygame.draw.circle(SCREEN, GREEN, (self.player.rect.centerx, self.player.rect.centery), 42, 1)
+                #for sprite in self.asteroids:
+                #    pygame.draw.circle(SCREEN, RED, (sprite.rect.centerx, sprite.rect.centery), 44, 1)
+                #for sprite in self.enemies:
+                #    pygame.draw.circle(SCREEN, RED, (sprite.rect.centerx, sprite.rect.centery), 44, 1)
                 GAMEFONT.render_to(SCREEN, (250,10), "DEBUG MODE ON", RED, None, size=18)
                 GAMEFONT.render_to(SCREEN, (10,650), "Enemies: " + str(len(self.enemies)), RED, None, size=18)   
                 GAMEFONT.render_to(SCREEN, (700,650), str(self.clock), RED, None, size=18)
