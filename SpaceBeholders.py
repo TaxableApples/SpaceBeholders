@@ -7,7 +7,7 @@ import math
 import numpy as np
 from os import path
 
-pygame.freetype.init();
+pygame.freetype.init()
 
 WIDTH, HEIGHT = 1024, 768
 FPS = 60
@@ -16,11 +16,14 @@ WHITE = (255,255,255)
 RED = (255,0,0)
 GREEN = (0,255,0)
 YELLOW = (255, 255, 0)
+ORANGE = (255, 165, 0)
 
 BEHOLDER_IMG = "beholder_pixel.png"
-ASTEROID_IMG = "asteroid_pixel.png"
+ASTEROID_LGA = "asteroid_lg.png"
+ASTEROID_LGB = "asteroid_lg2.png"
+ASTEROID_MED = "asteroid_md.png"
+ASTEROID_SM = "asteroid_sm.png"
 EXPLOSION_A = "explosion_01.png"
-#BACKGROUND_IMG = "space.png"
 SHIP_IMG = "ship_pixel.png"
 CURSOR_IMG = "cursor.png"
 HEALTHBAR_IMG = "healthbar.png"
@@ -69,30 +72,6 @@ class Playersheet():
         image.set_colorkey(WHITE)
 
         return image
-
-class Playerdamage(pygame.sprite.Sprite):
-    def __init__(self, x, y):
-        pygame.sprite.Sprite.__init__(self)
-        self.image1 = Playersheet().get_image(1,2)
-        self.image2 = Playersheet().get_image(2,0)
-        self.image = self.image1
-        self.image.set_colorkey(WHITE)
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        self.timer = 60
-    
-    def update(self):
-        self.timer -= 1
-
-        if self.timer > 0:
-            if self.image == self.image1:
-                self.image = self.image2
-            elif self.image == self.image2:
-                self.image = self.image1
-        else:
-            self.kill()
-            
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -158,6 +137,76 @@ class Player(pygame.sprite.Sprite):
             self.rect.bottom = 762       
         self.rect.x += self.speedx
         self.rect.y += self.speedy
+
+class Playerdamage(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image1 = Playersheet().get_image(1,2)
+        self.image2 = Playersheet().get_image(2,0)
+        self.image = self.image1
+        self.image.set_colorkey(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.timer = 60
+    
+    def update(self):
+        self.timer -= 1
+
+        if self.timer > 0:
+            if self.image == self.image1:
+                self.image = self.image2
+            elif self.image == self.image2:
+                self.image = self.image1
+        else:
+            self.kill()
+
+class Playerexhaust(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((rd.randint(1,4),(rd.randint(1,4))))
+        self.random = rd.randint(0,1)
+        if self.random == 1:
+            self.image.fill(RED)
+        else:
+            self.image.fill(ORANGE)
+        self.image.set_colorkey(BLACK) 
+        self.rect = self.image.get_rect()
+        self.rect.centery = y 
+        self.rect.centerx = x + rd.randint(-25,25)
+
+    def update(self):
+        self.rect.y += 10
+        if self.rect.y > HEIGHT:
+            self.kill()
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x, y, image):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((4,4))
+        self.image.fill(GREEN)
+        self.image.set_colorkey(BLACK)     
+        self.radius = 4.5
+        self.rect = self.image.get_rect()
+        self.rect.centery = y
+        self.rect.centerx = x
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        self.velx = mouse_x - self.rect.centerx
+        self.vely = mouse_y - self.rect.centery
+        self.velocity = np.array([self.velx, self.vely])
+        self.velocity = 10 * self.velocity / np.linalg.norm(self.velocity)
+        
+    def update(self):
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]      
+        if self.rect.bottom < 0:
+            self.kill()
+        if self.rect.top > 768:
+            self.kill()
+        if self.rect.left < 0:
+            self.kill()
+        if self.rect.right > 1024:
+            self.kill()
 
 class Aliensheet():
     def __init__(self):
@@ -288,7 +337,16 @@ class AlienDeath(pygame.sprite.Sprite):
 class Asteroid(pygame.sprite.Sprite):
     def __init__(self, x):
         pygame.sprite.Sprite.__init__(self)  
-        self.image = pygame.image.load(path.join(IMG_FOLDER, ASTEROID_IMG)).convert()
+
+        self.randomize = rd.randint(1,4)
+        if self.randomize == 1:
+            self.image = pygame.image.load(path.join(IMG_FOLDER, ASTEROID_LGA)).convert()
+        elif self.randomize == 2:
+            self.image = pygame.image.load(path.join(IMG_FOLDER, ASTEROID_LGB)).convert()
+        elif self.randomize == 3:
+            self.image = pygame.image.load(path.join(IMG_FOLDER, ASTEROID_MED)).convert()
+        else:
+            self.image = pygame.image.load(path.join(IMG_FOLDER, ASTEROID_SM)).convert()
         self.size = self.image.get_size()
         self.upsize = pygame.transform.scale(self.image, (int(self.size[0]*4), int(self.size[1]*4)))
         self.image = self.upsize
@@ -328,35 +386,6 @@ class SpaceDebris(pygame.sprite.Sprite):
     def update(self):
         self.rect.y += self.speed
         if self.rect.top > HEIGHT + 10:
-            self.kill()
-
-class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x, y, image):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((10,10))
-        self.image.fill(GREEN)
-        #self.image = pygame.image.load(path.join(IMG_FOLDER, image)).convert()
-        self.image.set_colorkey(BLACK)     
-        self.radius = 4.5
-        self.rect = self.image.get_rect()
-        self.rect.centery = y
-        self.rect.centerx = x
-        mouse_x, mouse_y = pygame.mouse.get_pos()
-        self.velx = mouse_x - self.rect.centerx
-        self.vely = mouse_y - self.rect.centery
-        self.velocity = np.array([self.velx, self.vely])
-        self.velocity = 10 * self.velocity / np.linalg.norm(self.velocity)
-        
-    def update(self):
-        self.rect.x += self.velocity[0]
-        self.rect.y += self.velocity[1]      
-        if self.rect.bottom < 0:
-            self.kill()
-        if self.rect.top > 768:
-            self.kill()
-        if self.rect.left < 0:
-            self.kill()
-        if self.rect.right > 1024:
             self.kill()
 
 class Explosionsheet():
@@ -512,6 +541,10 @@ class Game(object):
                 self.asteroids.add(self.asteroid)
                 self.all.add(self.asteroid)
 
+            if self.random > 8000:
+                self.exhaust = Playerexhaust(self.player.rect.centerx, (self.player.rect.centery+25))
+                self.all.add(self.exhaust)
+
             # Control
             for e in pygame.event.get():
                 if e.type == pygame.KEYDOWN:
@@ -659,6 +692,7 @@ class Game(object):
 
             pygame.display.flip()
         
+        #These must be defined at the bottom
         global SCORE 
         SCORE = self.score  
 
@@ -720,7 +754,10 @@ def main():
         
         if timer < 1500 and accbonus >= 0:
             accbonus -= 1
-            score += 1
+            if score > 0:
+                score += 1
+            else:
+                score -=1
         
         GAMEFONT.render_to(SCREEN, (400,300), final_message, RED, None, size=40)
         GAMEFONT.render_to(SCREEN, (350,350), "Final Score: " + str(score), RED, None, size=40)
