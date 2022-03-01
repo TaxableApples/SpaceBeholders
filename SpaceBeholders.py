@@ -18,7 +18,7 @@ GREEN = (0,255,0)
 YELLOW = (255, 255, 0)
 
 BEHOLDER_IMG = "beholder_pixel.png"
-ASTEROID_IMG = "asteroid2.png"
+ASTEROID_IMG = "asteroid_pixel.png"
 EXPLOSION_A = "explosion_01.png"
 #BACKGROUND_IMG = "space.png"
 SHIP_IMG = "ship_pixel.png"
@@ -80,11 +80,10 @@ class Playerdamage(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.timer = 30
+        self.timer = 60
     
     def update(self):
         self.timer -= 1
-        print("collide!")
 
         if self.timer > 0:
             if self.image == self.image1:
@@ -290,6 +289,9 @@ class Asteroid(pygame.sprite.Sprite):
     def __init__(self, x):
         pygame.sprite.Sprite.__init__(self)  
         self.image = pygame.image.load(path.join(IMG_FOLDER, ASTEROID_IMG)).convert()
+        self.size = self.image.get_size()
+        self.upsize = pygame.transform.scale(self.image, (int(self.size[0]*4), int(self.size[1]*4)))
+        self.image = self.upsize
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
         self.radius = 44
@@ -424,13 +426,6 @@ class Healthbar(pygame.sprite.Sprite):
         self.health = pygame.image.load(path.join(IMG_FOLDER, img2)).convert()
         self.rect = self.image.get_rect()
         self.rect.left, self.rect.top = loc
-
-# class Background(pygame.sprite.Sprite):
-#     def __init__(self, img, loc):
-#         pygame.sprite.Sprite.__init__(self)
-#         self.image = pygame.image.load(path.join(IMG_FOLDER, img)).convert()
-#         self.rect = self.image.get_rect()
-#         self.rect.left, self.rect.top = loc
 
 class Splashscreen(object):
     def __init__(self):
@@ -591,7 +586,7 @@ class Game(object):
 
             collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
             if collide:
-                self.player.health -= rd.randint(1,2)
+                self.player.health -= rd.randint(1,5)
             
             for sprite in collide:
                 if dict[sprite]:
@@ -633,7 +628,6 @@ class Game(object):
 
             # Draw
             SCREEN.fill(BLACK)
-            #SCREEN.blit(self.space.image,self.space.rect)
             SCREEN.blit(self.healthbar.image,(5,5))
             for i in range(self.player.health):
                 SCREEN.blit(self.healthbar.health, (i+8,8))
