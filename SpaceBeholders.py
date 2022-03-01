@@ -1,4 +1,5 @@
 from operator import xor
+from pyexpat.errors import XML_ERROR_SUSPENDED
 import pygame
 import pygame.freetype
 from pygame.locals import *
@@ -28,6 +29,7 @@ SHIP_IMG = "ship_pixel.png"
 CURSOR_IMG = "cursor.png"
 HEALTHBAR_IMG = "healthbar.png"
 HEALTH_IMG = "health.png"
+HEALTHPACK_IMG = "healthpack.png"
 BULLET_IMG = "bullet.png"
 
 DEBUG = True
@@ -161,27 +163,31 @@ class Playerdamage(pygame.sprite.Sprite):
         else:
             self.kill()
 
-class Playerexhaust(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+class Particles(pygame.sprite.Sprite):
+    def __init__(self, x, y, xspeed, yspeed, color, lifespan):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface((rd.randint(1,4),(rd.randint(1,4))))
         self.random = rd.randint(0,1)
-        if self.random == 1:
-            self.image.fill(RED)
-        else:
-            self.image.fill(ORANGE)
+        self.image.fill(color)
         self.image.set_colorkey(BLACK) 
         self.rect = self.image.get_rect()
         self.rect.centery = y 
-        self.rect.centerx = x + rd.randint(-25,25)
+        self.rect.centerx = x
+        self.xspeed = xspeed
+        self.yspeed = yspeed
+        self.lifespan = lifespan
+        self.timer = 0
 
     def update(self):
-        self.rect.y += 10
-        if self.rect.y > HEIGHT:
+        self.timer += 1
+
+        self.rect.y += self.yspeed
+        self.rect.x += self.xspeed
+        if self.rect.y > HEIGHT or self.timer > self.lifespan:
             self.kill()
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x, y, image):
+    def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface((4,4))
         self.image.fill(GREEN)
@@ -206,6 +212,21 @@ class Bullet(pygame.sprite.Sprite):
         if self.rect.left < 0:
             self.kill()
         if self.rect.right > 1024:
+            self.kill()
+
+class Healthpack(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load(path.join(IMG_FOLDER, HEALTHPACK_IMG)).convert()
+        self.image.set_colorkey(WHITE)
+        self.rect = self.image.get_rect()
+        self.speedy = rd.randint(4,10)
+        self.rect.y = -100
+        self.rect.x = rd.randint(0,WIDTH)
+
+    def update(self):
+        self.rect.y += self.speedy
+        if self.rect.top > HEIGHT + 10:
             self.kill()
 
 class Aliensheet():
@@ -499,8 +520,8 @@ class Game(object):
         self.fx = pygame.sprite.Group()
         self.debris = pygame.sprite.Group()
         self.ship = pygame.sprite.Group()
+        self.powerup = pygame.sprite.Group()
 
-        #self.space = Background(BACKGROUND_IMG, [0,0])
         self.player = Player()
         self.cursor = Cursor(CURSOR_IMG)
         self.healthbar = Healthbar(HEALTHBAR_IMG, HEALTH_IMG, [5,5])
@@ -542,8 +563,13 @@ class Game(object):
                 self.all.add(self.asteroid)
 
             if self.random > 8000:
-                self.exhaust = Playerexhaust(self.player.rect.centerx, (self.player.rect.centery+25))
+                self.exhaust = Particles((self.player.rect.centerx+rd.randint(-25,+25)), (self.player.rect.centery+25), 0, rd.randint(5,10), ORANGE, rd.randint(25,100))
                 self.all.add(self.exhaust)
+
+            if self.random > (10000 - self.level):
+                self.healthpack = Healthpack()
+                self.powerup.add(self.healthpack)
+                self.all.add(self.healthpack)
 
             # Control
             for e in pygame.event.get():
@@ -568,7 +594,7 @@ class Game(object):
                     self.bullet_timer -= self.shoot_if
                     if self.bullet_timer <= 0:
                         self.bullet_timer = 0.5
-                        self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, BULLET_IMG)
+                        self.bullet = Bullet(self.player.rect.centerx, self.player.rect.centery)
                         self.all.add(self.bullet)
                         self.bullets.add(self.bullet)
                         if SOUND > 0: 
@@ -584,8 +610,17 @@ class Game(object):
 
 
             # Collisions
-            hits = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
-            for sprite in hits:
+            enemy_bullethit = pygame.sprite.groupcollide(self.bullets, self.enemies, False, False)
+            for sprite in enemy_bullethit:
+                ex = sprite.rect.x  
+                ey = sprite.rect.y
+                pA = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
+                pB = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
+                pC = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
+                self.all.add(pA, pB, pC)
+
+            shoot_enemy = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
+            for sprite in shoot_enemy:
                 if dict[sprite]:
                     d = AlienDeath(sprite.rect.x, sprite.rect.y, sprite.speedx, sprite.speedy)
                     if SOUND > 0: 
@@ -599,13 +634,24 @@ class Game(object):
                     self.all.add(m)
                     self.enemies.add(m)
       
-            asteroid_hit = pygame.sprite.groupcollide(self.asteroids, self.bullets, False, True)
+            bullet_asteroid_hit = pygame.sprite.groupcollide(self.bullets, self.asteroids, True, False)
+            for sprite in bullet_asteroid_hit:
+                ex = sprite.rect.x  
+                ey = sprite.rect.y
+                pA = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
+                pB = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
+                pC = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
+                self.all.add(pA, pB, pC)
 
-            collide = pygame.sprite.spritecollide(self.player, self.asteroids, False, pygame.sprite.collide_circle)
-            if collide:
-                self.player.health -= rd.randint(5,10)
+            health_pickup = pygame.sprite.spritecollide(self.player, self.powerup, True, pygame.sprite.collide_circle)
+            if health_pickup:
+                self.player.health = 196
+
+            player_asteroid_collide = pygame.sprite.spritecollide(self.player, self.asteroids, False, pygame.sprite.collide_circle)
+            if player_asteroid_collide:
+                self.player.health -= rd.randint(5,12)
             
-            for sprite in collide:
+            for sprite in player_asteroid_collide:
                 if dict[sprite]:
                     ex = (sprite.rect.x + self.player.rect.x) / 2    
                     ey = (sprite.rect.y + self.player.rect.y) / 2
@@ -617,11 +663,11 @@ class Game(object):
                     self.all.add(e)
                     self.fx.add(e)
 
-            collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
-            if collide:
-                self.player.health -= rd.randint(1,5)
+            player_enemy_collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
+            if player_enemy_collide:
+                self.player.health -= rd.randint(5,10)
             
-            for sprite in collide:
+            for sprite in player_enemy_collide:
                 if dict[sprite]:
                     d = Playerdamage(self.player.rect.x, self.player.rect.y)
 
