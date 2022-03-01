@@ -38,7 +38,7 @@ RESOURCES_FOLDER = path.join(GAME_FOLDER, "resources")
 IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
 SOUND_FOLDER = path.join(RESOURCES_FOLDER, "audio")
 
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN)
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "Retro Gaming.ttf"), 22)
 
 pygame.init()
@@ -70,10 +70,40 @@ class Playersheet():
 
         return image
 
-class Player(pygame.sprite.Sprite):
-    def __init__(self, img):
+class Playerdamage(pygame.sprite.Sprite):
+    def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.image = Playersheet().get_image(0,0)
+        self.image1 = Playersheet().get_image(1,2)
+        self.image2 = Playersheet().get_image(2,0)
+        self.image = self.image1
+        self.image.set_colorkey(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.timer = 30
+    
+    def update(self):
+        self.timer -= 1
+        print("collide!")
+
+        if self.timer > 0:
+            if self.image == self.image1:
+                self.image = self.image2
+            elif self.image == self.image2:
+                self.image = self.image1
+        else:
+            self.kill()
+            
+
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image0 = Playersheet().get_image(0,0)
+        self.image1 = Playersheet().get_image(0,1)
+        self.image2 = Playersheet().get_image(0,2)
+        self.image3 = Playersheet().get_image(1,0)
+        self.image4 = Playersheet().get_image(1,1)
+        self.image = self.image0
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
         self.radius = 44
@@ -81,8 +111,26 @@ class Player(pygame.sprite.Sprite):
         self.speedx = 0
         self.speedy = 0
         self.health = 196
+        self.last_update = pygame.time.get_ticks()
+
+    def update_image(self):
+        now = pygame.time.get_ticks()
+
+        if now - self.last_update > 80:
+            if self.image == self.image0:
+                self.image = self.image1
+            elif self.image == self.image1:
+                self.image = self.image2
+            elif self.image == self.image2:
+                self.image = self.image3
+            elif self.image == self.image3:
+                self.image = self.image4
+            elif self.image == self.image4:
+                self.image = self.image0
+            self.last_update = now
 
     def update(self):
+        self.update_image()
         self.rect = self.image.get_rect(center=self.rect.center)
         if self.speedx > 0:
             self.speedx -= .08
@@ -130,6 +178,14 @@ class Alien(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.image1 = Aliensheet().get_image(0,0)
         self.image2 = Aliensheet().get_image(0,1)
+        self.image3 = Aliensheet().get_image(0,2)
+        self.image4 = Aliensheet().get_image(0,3)
+        self.image5 = Aliensheet().get_image(0,4)
+        self.image6 = Aliensheet().get_image(0,5)
+        self.image7 = Aliensheet().get_image(0,6)
+        self.image8 = Aliensheet().get_image(0,7)
+        self.image9 = Aliensheet().get_image(0,8)
+        self.image10 = Aliensheet().get_image(0,9)
         self.image = self.image1
         self.rect = self.image.get_rect()
         self.radius = 44
@@ -146,8 +202,25 @@ class Alien(pygame.sprite.Sprite):
         if now - self.last_update > 80:
             if self.image == self.image1:
                 self.image = self.image2
-            else:
+            elif self.image == self.image2:
+                self.image = self.image3
+            elif self.image == self.image3:
+                self.image = self.image4
+            elif self.image == self.image4:
+                self.image = self.image5
+            elif self.image == self.image5:
+                self.image = self.image6
+            elif self.image == self.image6:
+                self.image = self.image7
+            elif self.image == self.image7:
+                self.image = self.image8
+            elif self.image == self.image8:
+                self.image = self.image9
+            elif self.image == self.image9:
+                self.image = self.image10
+            elif self.image == self.image10:
                 self.image = self.image1
+
             self.last_update = now
     
     def update(self):
@@ -157,7 +230,6 @@ class Alien(pygame.sprite.Sprite):
 
         if self.rect.top > HEIGHT + 10:
             self.penalty = rd.randint(5,20)
-            #self.rec = self.image.get_rect()
             self.rect.x = rd.randrange(0, WIDTH - self.rect.width)
             self.rect.y = rd.randrange(-600, -300)
             self.speedy = rd.randrange(1, 8)
@@ -170,12 +242,17 @@ class AlienDeath(pygame.sprite.Sprite):
     def __init__(self, x, y, velx, vely):
         pygame.sprite.Sprite.__init__(self)
         
-        self.image1 = Aliensheet().get_image(0,2)
-        self.image2 = Aliensheet().get_image(0,3)
-        self.image3 = Aliensheet().get_image(1,0)
-        self.image4 = Aliensheet().get_image(1,1)
-        self.image5 = Aliensheet().get_image(1,2)
-        self.image6 = Aliensheet().get_image(1,3)
+        self.image1 = Aliensheet().get_image(1,0)
+        self.image2 = Aliensheet().get_image(1,1)
+        self.image3 = Aliensheet().get_image(1,2)
+        self.image4 = Aliensheet().get_image(1,3)
+        self.image5 = Aliensheet().get_image(1,4)
+        self.image6 = Aliensheet().get_image(1,5)
+        self.image7 = Aliensheet().get_image(1,6)
+        self.image8 = Aliensheet().get_image(1,7)
+        self.image9 = Aliensheet().get_image(1,8)
+        self.image10 = Aliensheet().get_image(1,9)
+
         self.image = self.image1
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -201,6 +278,12 @@ class AlienDeath(pygame.sprite.Sprite):
         if self.timer <= 5:
             self.image = self.image6
         if self.timer <= 0:
+            self.image = self.image7
+        if self.timer <= -5:
+            self.image = self.image8
+        if self.timer <= -10:
+            self.image = self.image9
+        if self.timer <= -15:
             self.kill()
             
 class Asteroid(pygame.sprite.Sprite):
@@ -394,7 +477,7 @@ class Game(object):
         self.ship = pygame.sprite.Group()
 
         #self.space = Background(BACKGROUND_IMG, [0,0])
-        self.player = Player(SHIP_IMG)
+        self.player = Player()
         self.cursor = Cursor(CURSOR_IMG)
         self.healthbar = Healthbar(HEALTHBAR_IMG, HEALTH_IMG, [5,5])
         self.shooting = False
@@ -411,20 +494,6 @@ class Game(object):
         while self.running:
             
             if self.start:
-                # while self.start_timer > 0:
-                        # self.clock.tick(FPS)
-                        # SCREEN.fill(BLACK)
-
-                        # self.newdebris = SpaceDebris()
-                        # self.debris.add(self.newdebris)
-                        # self.all.add(self.newdebris)
-
-                        # self.all.update()
-                        # self.all.draw(SCREEN)
-
-                        # self.start_timer = round(self.start_timer - .01, 2)
-                        # pygame.display.flip()
-
                 self.start = False
 
                 for _ in range(self.level):
@@ -506,19 +575,30 @@ class Game(object):
 
             collide = pygame.sprite.spritecollide(self.player, self.asteroids, False, pygame.sprite.collide_circle)
             if collide:
-                self.player.health -= rd.randint(5,20)
+                self.player.health -= rd.randint(5,10)
             
             for sprite in collide:
                 if dict[sprite]:
                     ex = (sprite.rect.x + self.player.rect.x) / 2    
                     ey = (sprite.rect.y + self.player.rect.y) / 2
                     e = Explosion(ex, ey)
+                    d = Playerdamage(self.player.rect.x, self.player.rect.y)
+
+                    self.all.add(d)
+                    self.fx.add(d)
                     self.all.add(e)
                     self.fx.add(e)
 
             collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
             if collide:
-                self.player.health -= rd.randint(5,20)
+                self.player.health -= rd.randint(1,2)
+            
+            for sprite in collide:
+                if dict[sprite]:
+                    d = Playerdamage(self.player.rect.x, self.player.rect.y)
+
+                    self.all.add(d)
+                    self.fx.add(d)
 
             # Win / Lose
             if self.player.health <= 0:
