@@ -9,7 +9,7 @@ from os import path
 
 pygame.freetype.init();
 
-WIDTH, HEIGHT = 1024, 768
+WIDTH, HEIGHT = 160, 120
 FPS = 60
 BLACK = (0,0,0)
 WHITE = (255,255,255)
@@ -17,17 +17,17 @@ RED = (255,0,0)
 GREEN = (0,255,0)
 YELLOW = (255, 255, 0)
 
-BEHOLDER_IMG = "beholder.png"
+BEHOLDER_IMG = "beholder_pixel.png"
 ASTEROID_IMG = "asteroid2.png"
 EXPLOSION_A = "explosion_01.png"
 #BACKGROUND_IMG = "space.png"
-SHIP_IMG = "ship.png"
+SHIP_IMG = "ship_pixel.png"
 CURSOR_IMG = "cursor.png"
 HEALTHBAR_IMG = "healthbar.png"
 HEALTH_IMG = "health.png"
 BULLET_IMG = "bullet.png"
 
-DEBUG = False
+DEBUG = True
 PENALTY = [0]
 ACCBONUS = 0
 SCORE = 0
@@ -38,10 +38,11 @@ RESOURCES_FOLDER = path.join(GAME_FOLDER, "resources")
 IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
 SOUND_FOLDER = path.join(RESOURCES_FOLDER, "audio")
 
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN, 32)
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN)
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "AlloyInk.ttf"), 22)
 
 pygame.init()
+pygame.event.set_grab(True)
 
 try:
     pygame.mixer.init()
@@ -56,14 +57,25 @@ if SOUND > 0:
     pygame.mixer.music.load(path.join(SOUND_FOLDER,"space track.ogg"))
     pygame.mixer.music.play(loops = -1)
 
+class Playersheet():
+    def __init__(self):
+        self.sheet = pygame.image.load(path.join(IMG_FOLDER,SHIP_IMG)).convert()
+
+    def get_image(self, row, frame):
+        image = pygame.Surface((24, 24))
+        image.blit(self.sheet, (0,0), ((frame * 24), (row * 24), 24, 24))
+        image.set_colorkey(WHITE)
+
+        return image
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, img):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load(path.join(IMG_FOLDER, img)).convert()
-        self.backup_image = self.image
+        self.backup_image = Playersheet().get_image(0,0)
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
-        self.radius = 42
+        self.radius = 10
         self.rect.center = (WIDTH / 2, HEIGHT - 20)
         self.speedx = 0
         self.speedy = 0
@@ -108,8 +120,8 @@ class Aliensheet():
         self.sheet = pygame.image.load(path.join(IMG_FOLDER,BEHOLDER_IMG)).convert()
 
     def get_image(self, row, frame):
-        image = pygame.Surface((100, 100))
-        image.blit(self.sheet, (0,0), ((frame * 100), (row * 100), 100, 100))
+        image = pygame.Surface((24, 24))
+        image.blit(self.sheet, (0,0), ((frame * 24), (row * 24), 24, 24))
         image.set_colorkey(WHITE)
 
         return image
