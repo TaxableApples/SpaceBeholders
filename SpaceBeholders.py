@@ -4,87 +4,79 @@ import pygame
 import pygame.freetype
 from pygame.locals import *
 import random as rd
-import math
 import numpy as np
 from os import path
 
 pygame.freetype.init()
+pygame.init()
+pygame.event.set_grab(True)
 
 WIDTH, HEIGHT = 1024, 768
-FPS = 60
-BLACK = (0,0,0)
-WHITE = (255,255,255)
-RED = (255,0,0)
-GREEN = (0,255,0)
-YELLOW = (255, 255, 0)
-ORANGE = (255, 165, 0)
-
-BEHOLDER_IMG = "beholder_pixel.png"
-ASTEROID_LGA = "asteroid_lg.png"
-ASTEROID_LGB = "asteroid_lg2.png"
-ASTEROID_MED = "asteroid_md.png"
-ASTEROID_SM = "asteroid_sm.png"
-EXPLOSION_A = "explosion_01.png"
-SHIP_IMG = "ship_pixel.png"
-CURSOR_IMG = "cursor.png"
-HEALTHBAR_IMG = "healthbar.png"
-HEALTH_IMG = "health.png"
-HEALTHPACK_IMG = "healthpack.png"
-BULLET_IMG = "bullet.png"
-
 DEBUG = True
 PENALTY = [0]
 ACCBONUS = 0
 SCORE = 0
 SOUND = 1
-
 GAME_FOLDER = path.dirname(__file__)
 RESOURCES_FOLDER = path.join(GAME_FOLDER, "resources")
 IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
 SOUND_FOLDER = path.join(RESOURCES_FOLDER, "audio")
-
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "Retro Gaming.ttf"), 22)
-
-pygame.init()
-pygame.event.set_grab(True)
 
 try:
     pygame.mixer.init()
 except:
     SOUND = 0
-    print("no sound card installed!")
+    print("Error: Failed to load sound device!")
 
-# sounds
-if SOUND > 0: 
-    enemy_explosion = pygame.mixer.Sound(path.join(SOUND_FOLDER, "explosion.ogg"))
-    laser_shoot = pygame.mixer.Sound(path.join(SOUND_FOLDER, "shoot.ogg"))
-    pygame.mixer.music.load(path.join(SOUND_FOLDER,"space track.ogg"))
-    pygame.mixer.music.play(loops = -1)
-
-class Playersheet():
+class Player_sheet():
     def __init__(self):        
-        self.image = pygame.image.load(path.join(IMG_FOLDER,SHIP_IMG)).convert()
+        self.image = pygame.image.load(path.join(IMG_FOLDER,"ship_pixel.png")).convert()
         self.size = self.image.get_size()
         self.sheet = pygame.transform.scale(self.image, (int(self.size[0]*4), int(self.size[1]*4)))
 
     def get_image(self, row, frame):
         image = pygame.Surface((96, 96))
         image.blit(self.sheet, (0,0), ((frame * 96), (row * 96), 96, 96))
-        image.set_colorkey(WHITE)
+        image.set_colorkey((255,255,255))
+
+        return image
+
+class Alien_sheet():
+    def __init__(self):
+        self.image = pygame.image.load(path.join(IMG_FOLDER, "beholder_pixel.png")).convert()
+        self.size = self.image.get_size()
+        self.sheet = pygame.transform.scale(self.image, (int(self.size[0]*4), int(self.size[1]*4)))
+
+    def get_image(self, row, frame):
+        image = pygame.Surface((96, 96))
+        image.blit(self.sheet, (0,0), ((frame * 96), (row * 96), 96, 96))
+        image.set_colorkey((255,255,255))
+
+        return image
+
+class Explosion_sheet():
+    def __init__(self):
+        self.sheet = pygame.image.load(path.join(IMG_FOLDER, "explosion_01.png")).convert()
+
+    def get_image(self, frame):
+        image = pygame.Surface((100, 100))
+        image.blit(self.sheet, (0,0), ((frame * 100), 0, 100, 100))
+        image.set_colorkey((0,0,0))
 
         return image
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image0 = Playersheet().get_image(0,0)
-        self.image1 = Playersheet().get_image(0,1)
-        self.image2 = Playersheet().get_image(0,2)
-        self.image3 = Playersheet().get_image(1,0)
-        self.image4 = Playersheet().get_image(1,1)
+        self.image0 = Player_sheet().get_image(0,0)
+        self.image1 = Player_sheet().get_image(0,1)
+        self.image2 = Player_sheet().get_image(0,2)
+        self.image3 = Player_sheet().get_image(1,0)
+        self.image4 = Player_sheet().get_image(1,1)
         self.image = self.image0
-        self.image.set_colorkey(WHITE)
+        self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
         self.radius = 44
         self.rect.center = (WIDTH / 2, HEIGHT - 20)
@@ -143,10 +135,10 @@ class Player(pygame.sprite.Sprite):
 class Playerdamage(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.image1 = Playersheet().get_image(1,2)
-        self.image2 = Playersheet().get_image(2,0)
+        self.image1 = Player_sheet().get_image(1,2)
+        self.image2 = Player_sheet().get_image(2,0)
         self.image = self.image1
-        self.image.set_colorkey(WHITE)
+        self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -169,7 +161,7 @@ class Particles(pygame.sprite.Sprite):
         self.image = pygame.Surface((rd.randint(1,4),(rd.randint(1,4))))
         self.random = rd.randint(0,1)
         self.image.fill(color)
-        self.image.set_colorkey(BLACK) 
+        self.image.set_colorkey((0,0,0)) 
         self.rect = self.image.get_rect()
         self.rect.centery = y 
         self.rect.centerx = x
@@ -190,8 +182,8 @@ class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface((4,4))
-        self.image.fill(GREEN)
-        self.image.set_colorkey(BLACK)     
+        self.image.fill((0,255,0))
+        self.image.set_colorkey((0,0,0))     
         self.radius = 4.5
         self.rect = self.image.get_rect()
         self.rect.centery = y
@@ -217,8 +209,8 @@ class Bullet(pygame.sprite.Sprite):
 class Healthpack(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load(path.join(IMG_FOLDER, HEALTHPACK_IMG)).convert()
-        self.image.set_colorkey(WHITE)
+        self.image = pygame.image.load(path.join(IMG_FOLDER, "healthpack.png")).convert()
+        self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
         self.speedy = rd.randint(4,10)
         self.rect.y = -100
@@ -229,32 +221,27 @@ class Healthpack(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT + 10:
             self.kill()
 
-class Aliensheet():
-    def __init__(self):
-        self.image = pygame.image.load(path.join(IMG_FOLDER,BEHOLDER_IMG)).convert()
-        self.size = self.image.get_size()
-        self.sheet = pygame.transform.scale(self.image, (int(self.size[0]*4), int(self.size[1]*4)))
-
-    def get_image(self, row, frame):
-        image = pygame.Surface((96, 96))
-        image.blit(self.sheet, (0,0), ((frame * 96), (row * 96), 96, 96))
-        image.set_colorkey(WHITE)
-
-        return image
+class Healthbar(pygame.sprite.Sprite):
+    def __init__(self, loc):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load(path.join(IMG_FOLDER, "healthbar.png")).convert()
+        self.health = pygame.image.load(path.join(IMG_FOLDER, "health.png")).convert()
+        self.rect = self.image.get_rect()
+        self.rect.left, self.rect.top = loc
 
 class Alien(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image1 = Aliensheet().get_image(0,0)
-        self.image2 = Aliensheet().get_image(0,1)
-        self.image3 = Aliensheet().get_image(0,2)
-        self.image4 = Aliensheet().get_image(0,3)
-        self.image5 = Aliensheet().get_image(0,4)
-        self.image6 = Aliensheet().get_image(0,5)
-        self.image7 = Aliensheet().get_image(0,6)
-        self.image8 = Aliensheet().get_image(0,7)
-        self.image9 = Aliensheet().get_image(0,8)
-        self.image10 = Aliensheet().get_image(0,9)
+        self.image1 = Alien_sheet().get_image(0,0)
+        self.image2 = Alien_sheet().get_image(0,1)
+        self.image3 = Alien_sheet().get_image(0,2)
+        self.image4 = Alien_sheet().get_image(0,3)
+        self.image5 = Alien_sheet().get_image(0,4)
+        self.image6 = Alien_sheet().get_image(0,5)
+        self.image7 = Alien_sheet().get_image(0,6)
+        self.image8 = Alien_sheet().get_image(0,7)
+        self.image9 = Alien_sheet().get_image(0,8)
+        self.image10 = Alien_sheet().get_image(0,9)
         self.image = self.image1
         self.rect = self.image.get_rect()
         self.radius = 44
@@ -311,16 +298,16 @@ class AlienDeath(pygame.sprite.Sprite):
     def __init__(self, x, y, velx, vely):
         pygame.sprite.Sprite.__init__(self)
         
-        self.image1 = Aliensheet().get_image(1,0)
-        self.image2 = Aliensheet().get_image(1,1)
-        self.image3 = Aliensheet().get_image(1,2)
-        self.image4 = Aliensheet().get_image(1,3)
-        self.image5 = Aliensheet().get_image(1,4)
-        self.image6 = Aliensheet().get_image(1,5)
-        self.image7 = Aliensheet().get_image(1,6)
-        self.image8 = Aliensheet().get_image(1,7)
-        self.image9 = Aliensheet().get_image(1,8)
-        self.image10 = Aliensheet().get_image(1,9)
+        self.image1 = Alien_sheet().get_image(1,0)
+        self.image2 = Alien_sheet().get_image(1,1)
+        self.image3 = Alien_sheet().get_image(1,2)
+        self.image4 = Alien_sheet().get_image(1,3)
+        self.image5 = Alien_sheet().get_image(1,4)
+        self.image6 = Alien_sheet().get_image(1,5)
+        self.image7 = Alien_sheet().get_image(1,6)
+        self.image8 = Alien_sheet().get_image(1,7)
+        self.image9 = Alien_sheet().get_image(1,8)
+        self.image10 = Alien_sheet().get_image(1,9)
 
         self.image = self.image1
         self.rect = self.image.get_rect()
@@ -361,17 +348,17 @@ class Asteroid(pygame.sprite.Sprite):
 
         self.randomize = rd.randint(1,4)
         if self.randomize == 1:
-            self.image = pygame.image.load(path.join(IMG_FOLDER, ASTEROID_LGA)).convert()
+            self.image = pygame.image.load(path.join(IMG_FOLDER, "asteroid_lg.png")).convert()
         elif self.randomize == 2:
-            self.image = pygame.image.load(path.join(IMG_FOLDER, ASTEROID_LGB)).convert()
+            self.image = pygame.image.load(path.join(IMG_FOLDER, "asteroid_lg2.png")).convert()
         elif self.randomize == 3:
-            self.image = pygame.image.load(path.join(IMG_FOLDER, ASTEROID_MED)).convert()
+            self.image = pygame.image.load(path.join(IMG_FOLDER, "asteroid_md.png")).convert()
         else:
-            self.image = pygame.image.load(path.join(IMG_FOLDER, ASTEROID_SM)).convert()
+            self.image = pygame.image.load(path.join(IMG_FOLDER, "asteroid_sm.png")).convert()
         self.size = self.image.get_size()
         self.upsize = pygame.transform.scale(self.image, (int(self.size[0]*4), int(self.size[1]*4)))
         self.image = self.upsize
-        self.image.set_colorkey(WHITE)
+        self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
         self.radius = 44
         self.rect.y = -100
@@ -409,31 +396,20 @@ class SpaceDebris(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT + 10:
             self.kill()
 
-class Explosionsheet():
-    def __init__(self):
-        self.sheet = pygame.image.load(path.join(IMG_FOLDER, EXPLOSION_A)).convert()
-
-    def get_image(self, frame):
-        image = pygame.Surface((100, 100))
-        image.blit(self.sheet, (0,0), ((frame * 100), 0, 100, 100))
-        image.set_colorkey(BLACK)
-
-        return image
-
 class Explosion(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         
-        self.image1 = Explosionsheet().get_image(0)
-        self.image2 = Explosionsheet().get_image(1)
-        self.image3 = Explosionsheet().get_image(2)
-        self.image4 = Explosionsheet().get_image(3)
-        self.image5 = Explosionsheet().get_image(4)
-        self.image6 = Explosionsheet().get_image(5)
-        self.image7 = Explosionsheet().get_image(7)
-        self.image8 = Explosionsheet().get_image(8)
-        self.image9 = Explosionsheet().get_image(9)
-        self.image10 = Explosionsheet().get_image(10)
+        self.image1 = Explosion_sheet().get_image(0)
+        self.image2 = Explosion_sheet().get_image(1)
+        self.image3 = Explosion_sheet().get_image(2)
+        self.image4 = Explosion_sheet().get_image(3)
+        self.image5 = Explosion_sheet().get_image(4)
+        self.image6 = Explosion_sheet().get_image(5)
+        self.image7 = Explosion_sheet().get_image(7)
+        self.image8 = Explosion_sheet().get_image(8)
+        self.image9 = Explosion_sheet().get_image(9)
+        self.image10 = Explosion_sheet().get_image(10)
         self.image = self.image1
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -458,30 +434,22 @@ class Explosion(pygame.sprite.Sprite):
             self.kill()
 
 class Cursor(pygame.sprite.Sprite):
-    def __init__(self, file):
+    def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load(path.join(IMG_FOLDER, file)).convert()
-        self.image.set_colorkey(WHITE)
+        self.image = pygame.image.load(path.join(IMG_FOLDER, "cursor.png")).convert()
+        self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
     
     def update(self):
         x, y = pygame.mouse.get_pos()
         self.rect.x = x - 23
         self.rect.y = y - 23
-        
-class Healthbar(pygame.sprite.Sprite):
-    def __init__(self, img, img2, loc):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load(path.join(IMG_FOLDER, img)).convert()
-        self.health = pygame.image.load(path.join(IMG_FOLDER, img2)).convert()
-        self.rect = self.image.get_rect()
-        self.rect.left, self.rect.top = loc
 
 class Splashscreen(object):
     def __init__(self):
         self.running = True
-        self.logo = Aliensheet().get_image(0,0)
-        self.logo.set_colorkey(WHITE)
+        self.logo = Alien_sheet().get_image(0,0)
+        self.logo.set_colorkey((255,255,255))
 
     def run(self):
         while self.running:
@@ -489,16 +457,19 @@ class Splashscreen(object):
                 if e.type == pygame.KEYDOWN:
                     self.running = False
                     pygame.time.set_timer(pygame.KEYDOWN, 0)
+                if e.type == pygame.KEYDOWN:
+                        if e.key == K_ESCAPE:
+                            main_game_loop(False)
 
-            SCREEN.fill(BLACK)
+            SCREEN.fill((0,0,0))
             SCREEN.blit(self.logo, (440, 200))
-            GAMEFONT.render_to(SCREEN, (210 ,HEIGHT / 2), "SPACE BEHOLDERS", RED, None, size=64)
-            GAMEFONT.render_to(SCREEN, (370 , 500), "Press Any Key to Play", RED, None, size=22)
-            GAMEFONT.render_to(SCREEN, (190 , 600), "Use Mouse to aim and shoot, Use keys A,S,D,W to fly", RED, None, size=22)
-            GAMEFONT.render_to(SCREEN, (330, 650), "Press the Spacebar to pause", RED, None, size=22)
+            GAMEFONT.render_to(SCREEN, (210 ,HEIGHT / 2), "SPACE BEHOLDERS", (255,0,0), None, size=64)
+            GAMEFONT.render_to(SCREEN, (370 , 500), "Press Any Key to Play", (255,0,0), None, size=22)
+            GAMEFONT.render_to(SCREEN, (190 , 600), "Use Mouse to aim and shoot, Use keys A,S,D,W to fly", (255,0,0), None, size=22)
+            GAMEFONT.render_to(SCREEN, (330, 650), "Press the Spacebar to pause", (255,0,0), None, size=22)
             pygame.display.flip()
 
-class Game(object):
+class PlayGame(object):
     def __init__(self):
         self.running = True
         self.score = 0
@@ -510,7 +481,7 @@ class Game(object):
         self.pause = False
         self.start_timer = 5.0
         self.start = True
-
+        self.fps = 60
         self.spawn = pygame.USEREVENT + 1
         self.clock = pygame.time.Clock()
         self.all = pygame.sprite.Group()
@@ -521,23 +492,19 @@ class Game(object):
         self.debris = pygame.sprite.Group()
         self.ship = pygame.sprite.Group()
         self.powerup = pygame.sprite.Group()
-
         self.player = Player()
-        self.cursor = Cursor(CURSOR_IMG)
-        self.healthbar = Healthbar(HEALTHBAR_IMG, HEALTH_IMG, [5,5])
+        self.cursor = Cursor()
+        self.healthbar = Healthbar([5,5])
         self.shooting = False
         self.bullet_timer = 0.5
-        self.shoot_if = 0
-        
+        self.shoot_if = 0       
         self.all.add(self.player)
         self.all.add(self.cursor)
 
-    def restart(self):
-        pygame.time.set_timer(self.spawn, 1000 - self.score * 2)
-
     def run(self):
-        while self.running:
-            
+        def timed_and_random_events():
+            self.clock.tick(self.fps)
+
             if self.start:
                 self.start = False
 
@@ -546,15 +513,10 @@ class Game(object):
                     self.all.add(self.m)
                     self.enemies.add(self.m)
 
-            self.clock.tick(FPS)
-
             if self.timer < 0.0:
                 self.timer = 20.00
-
             self.bullet_timer -= 0.025
-
             self.timer = round(self.timer - .01, 2)
-
             self.random = rd.randint(1,10000)
 
             if self.timer > 5.0 and self.random > 9950:
@@ -563,7 +525,7 @@ class Game(object):
                 self.all.add(self.asteroid)
 
             if self.random > 8000:
-                self.exhaust = Particles((self.player.rect.centerx+rd.randint(-25,+25)), (self.player.rect.centery+25), 0, rd.randint(5,10), ORANGE, rd.randint(25,100))
+                self.exhaust = Particles((self.player.rect.centerx+rd.randint(-25,+25)), (self.player.rect.centery+25), 0, rd.randint(5,10), (255, 165, 0), rd.randint(25,100)) #Orange
                 self.all.add(self.exhaust)
 
             if self.random > (10000 - self.level):
@@ -571,7 +533,7 @@ class Game(object):
                 self.powerup.add(self.healthpack)
                 self.all.add(self.healthpack)
 
-            # Control
+        def player_controls():
             for e in pygame.event.get():
                 if e.type == pygame.KEYDOWN:
                     if e.key == K_ESCAPE:
@@ -580,8 +542,6 @@ class Game(object):
                         QUIT = True
                     else:
                         QUIT = False
-                    if e.key == K_SPACE:
-                        self.pause = True
 
                 if e.type == pygame.MOUSEBUTTONDOWN:
                     self.bullet_timer = 0
@@ -598,33 +558,39 @@ class Game(object):
                         self.all.add(self.bullet)
                         self.bullets.add(self.bullet)
                         if SOUND > 0: 
-                            pygame.mixer.Channel(0).play(laser_shoot)
+                            pygame.mixer.Channel(0).play(pygame.mixer.Sound(path.join(SOUND_FOLDER, "shoot.ogg")))
                         self.accuracy[1] += 1
 
-            self.all.update()
+        def pause_game():
+            for e in pygame.event.get():
+                if e.type == pygame.KEYDOWN:
+                    if e.key == K_SPACE:
+                        self.pause = True
 
-            while self.pause:
-                for e in pygame.event.get():
-                    if e.type == pygame.KEYDOWN:
-                        self.pause = False
+                while self.pause:
+                        for e in pygame.event.get():
+                            if e.type == pygame.KEYDOWN:
+                                self.pause = False
 
-
-            # Collisions
-            enemy_bullethit = pygame.sprite.groupcollide(self.bullets, self.enemies, False, False)
-            for sprite in enemy_bullethit:
-                ex = sprite.rect.x  
-                ey = sprite.rect.y
-                pA = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
-                pB = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
-                pC = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
-                self.all.add(pA, pB, pC)
-
-            shoot_enemy = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
-            for sprite in shoot_enemy:
+        def enemy_hit_by_bullet():
+                enemy_hit_by_bullet = pygame.sprite.groupcollide(self.bullets, self.enemies, False, False)
+                for sprite in enemy_hit_by_bullet:
+                    ex = sprite.rect.x
+                    ey = sprite.rect.y
+                    r = rd.randint(3,6)
+                    for _ in range(r):
+                        laser = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
+                        blood = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), ((rd.randint(100,255)),0,0), rd.randint(25,100))
+                        purplegoo = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (147,112,219), rd.randint(25,100))
+                        self.all.add(laser, blood, purplegoo)
+        
+        def player_shoot_enemy():
+            player_shoot_enemy = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
+            for sprite in player_shoot_enemy:
                 if dict[sprite]:
                     d = AlienDeath(sprite.rect.x, sprite.rect.y, sprite.speedx, sprite.speedy)
                     if SOUND > 0: 
-                        pygame.mixer.Channel(1).play(enemy_explosion)
+                        pygame.mixer.Channel(1).play(pygame.mixer.Sound(path.join(SOUND_FOLDER, "explosion.ogg")))
                     self.all.add(d)
                     self.score += rd.randint(5,20)
                     self.accuracy[0] += 1
@@ -633,20 +599,24 @@ class Game(object):
                     m = Alien()
                     self.all.add(m)
                     self.enemies.add(m)
-      
-            bullet_asteroid_hit = pygame.sprite.groupcollide(self.bullets, self.asteroids, True, False)
-            for sprite in bullet_asteroid_hit:
+        
+        def player_shoot_asteroid():
+            player_shoot_asteroid = pygame.sprite.groupcollide(self.bullets, self.asteroids, True, False)
+            for sprite in player_shoot_asteroid:
                 ex = sprite.rect.x  
                 ey = sprite.rect.y
-                pA = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
-                pB = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
-                pC = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
-                self.all.add(pA, pB, pC)
+                r = rd.randint(3,6)
+                for i in range(r):
+                    pA = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
 
-            health_pickup = pygame.sprite.spritecollide(self.player, self.powerup, True, pygame.sprite.collide_circle)
-            if health_pickup:
+                    self.all.add(pA)
+        
+        def player_health_pickup():
+            player_health_pickup = pygame.sprite.spritecollide(self.player, self.powerup, True, pygame.sprite.collide_circle)
+            if player_health_pickup:
                 self.player.health = 196
-
+        
+        def player_asteroid_collide():
             player_asteroid_collide = pygame.sprite.spritecollide(self.player, self.asteroids, False, pygame.sprite.collide_circle)
             if player_asteroid_collide:
                 self.player.health -= rd.randint(5,12)
@@ -658,11 +628,10 @@ class Game(object):
                     e = Explosion(ex, ey)
                     d = Playerdamage(self.player.rect.x, self.player.rect.y)
 
-                    self.all.add(d)
-                    self.fx.add(d)
-                    self.all.add(e)
-                    self.fx.add(e)
-
+                    self.all.add(d, e)
+                    self.fx.add(d, e)
+        
+        def player_enemy_collide():
             player_enemy_collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
             if player_enemy_collide:
                 self.player.health -= rd.randint(5,10)
@@ -673,8 +642,8 @@ class Game(object):
 
                     self.all.add(d)
                     self.fx.add(d)
-
-            # Win / Lose
+        
+        def win_lose_game():
             if self.player.health <= 0:
                 self.running = 0
 
@@ -682,13 +651,17 @@ class Game(object):
                 self.score -= PENALTY[1]
                 PENALTY.pop()
 
+            if self.accuracy[1] != 0:
+                self.acccalc = self.accuracy[0] * 1.0 / self.accuracy[1]*100
+        
+        def go_to_next_level():
             if self.timer == 0:
                 levelup = True
                 newlevel = self.level + 1
                 while levelup:
-                    SCREEN.fill(BLACK)
-                    GAMEFONT.render_to(SCREEN, (100,470), "Press Any Key to Continue to Level: " + str(self.level - 3), RED, None, size=40)
-                    GAMEFONT.render_to(SCREEN, (400,550), "SCORE: " + str(self.score), RED, None, size=40)
+                    SCREEN.fill((0,0,0))
+                    GAMEFONT.render_to(SCREEN, (100,470), "Press Any Key to Continue to Level: " + str(self.level - 3), (255,0,0), None, size=40)
+                    GAMEFONT.render_to(SCREEN, (400,550), "SCORE: " + str(self.score), (255,0,0), None, size=40)
                     
                     if self.level != newlevel:
                         self.level += 1
@@ -701,23 +674,20 @@ class Game(object):
                         if e.type == pygame.KEYDOWN:
                             levelup = False
                     pygame.display.flip()
-            
-            if self.accuracy[1] != 0:
-                self.acccalc = self.accuracy[0] * 1.0 / self.accuracy[1]*100
-
-            # Draw
-            SCREEN.fill(BLACK)
+        
+        def draw_to_screen():
+            SCREEN.fill((0,0,0))
             SCREEN.blit(self.healthbar.image,(5,5))
             for i in range(self.player.health):
                 SCREEN.blit(self.healthbar.health, (i+8,8))
 
-            GAMEFONT.render_to(SCREEN, (875,15), "'Esc' to Quit", RED, None, size=18)
-            GAMEFONT.render_to(SCREEN, (200,700), "Score: " + str(self.score), RED, None, size=18)            
-            GAMEFONT.render_to(SCREEN, (10,700), "Level: " + str(self.level - 3), RED, None, size=18)
-            GAMEFONT.render_to(SCREEN, (400,700), "Round: " + str(self.timer), RED, None, size=18) 
-            GAMEFONT.render_to(SCREEN, (700,700), "Accuracy: " + str(round(self.acccalc, 2)) + "%", RED, None, size=18)          
+            GAMEFONT.render_to(SCREEN, (875,15), "'Esc' to Quit", (255,0,0), None, size=18)
+            GAMEFONT.render_to(SCREEN, (200,700), "Score: " + str(self.score), (255,0,0), None, size=18)            
+            GAMEFONT.render_to(SCREEN, (10,700), "Level: " + str(self.level - 3), (255,0,0), None, size=18)
+            GAMEFONT.render_to(SCREEN, (400,700), "Round: " + str(self.timer), (255,0,0), None, size=18) 
+            GAMEFONT.render_to(SCREEN, (700,700), "Accuracy: " + str(round(self.acccalc, 2)) + "%", (255,0,0), None, size=18)          
             if self.timer < 3.0:
-                GAMEFONT.render_to(SCREEN, (500,300), str(int(self.timer)), RED, None, size=40)
+                GAMEFONT.render_to(SCREEN, (500,300), str(int(self.timer)), (255,0,0), None, size=40)
 
             if int(self.clock.get_fps()) > 58:
                 self.newdebris = SpaceDebris()
@@ -727,89 +697,93 @@ class Game(object):
             self.all.draw(SCREEN)
 
             if DEBUG:
-                #pygame.draw.circle(SCREEN, GREEN, (self.player.rect.centerx, self.player.rect.centery), 42, 1)
+                #pygame.draw.circle(SCREEN, (0,255,0), (self.player.rect.centerx, self.player.rect.centery), 42, 1)
                 #for sprite in self.asteroids:
-                #    pygame.draw.circle(SCREEN, RED, (sprite.rect.centerx, sprite.rect.centery), 44, 1)
+                #    pygame.draw.circle(SCREEN, (255,0,0), (sprite.rect.centerx, sprite.rect.centery), 44, 1)
                 #for sprite in self.enemies:
-                #    pygame.draw.circle(SCREEN, RED, (sprite.rect.centerx, sprite.rect.centery), 44, 1)
-                GAMEFONT.render_to(SCREEN, (250,10), "DEBUG MODE ON", RED, None, size=18)
-                GAMEFONT.render_to(SCREEN, (10,650), "Enemies: " + str(len(self.enemies)), RED, None, size=18)   
-                GAMEFONT.render_to(SCREEN, (700,650), str(self.clock), RED, None, size=18)
-
-            pygame.display.flip()
+                #    pygame.draw.circle(SCREEN, (255,0,0), (sprite.rect.centerx, sprite.rect.centery), 44, 1)
+                GAMEFONT.render_to(SCREEN, (250,10), "DEBUG MODE ON", (255,0,0), None, size=18)
+                GAMEFONT.render_to(SCREEN, (10,650), "Enemies: " + str(len(self.enemies)), (255,0,0), None, size=18)   
+                GAMEFONT.render_to(SCREEN, (700,650), str(self.clock), (255,0,0), None, size=18)
         
-        #These must be defined at the bottom
-        global SCORE 
-        SCORE = self.score  
+        def set_score():
+            global SCORE 
+            SCORE = self.score  
 
-        global ACCBONUS
-        ACCBONUS = self.acccalc * 10 * (self.level - 3)
+            global ACCBONUS
+            ACCBONUS = self.acccalc * 10 * (self.level - 3)
 
-def main():
-    splash = True
-    game = True 
-    running = True
-    timer = 2000
-    firstrun = True
+        while self.running:       
+            timed_and_random_events()
+            player_controls()
+            pause_game()
+            enemy_hit_by_bullet()
+            player_shoot_enemy()
+            player_shoot_asteroid()
+            player_health_pickup()
+            player_asteroid_collide()
+            player_enemy_collide()
+            win_lose_game()
+            go_to_next_level()              
+            draw_to_screen()
+            self.all.update()
+            pygame.display.flip()
 
+        set_score()
+
+class End_Game_Screen(object):
+    def __init__(self):
+        self.running = True
+        self.timer = 1200
+
+    def run(self):
+        while self.running:
+            SCREEN.fill((0,0,0))
+            GAMEFONT.render_to(SCREEN, (400,300), f"GAME OVER", (255,0,0), None, size=40)
+            #GAMEFONT.render_to(SCREEN, (350,350), "Final Score: " + str(score), (255,0,0), None, size=40)
+            
+            if self.timer > 0:
+                self.timer -= 1
+
+            if self.timer <= 0:
+                GAMEFONT.render_to(SCREEN, (390,410), "Press 'esc' to quit", (255,0,0), None, size=20)
+                GAMEFONT.render_to(SCREEN, (340,450), "Press 'any key' to continue", (255,0,0), None, size=20)
+                for e in pygame.event.get():
+                    if e.type == pygame.KEYDOWN:
+                        self.running = False
+                        pygame.time.set_timer(pygame.KEYDOWN, 0)
+
+                    if e.type == pygame.KEYDOWN:
+                        if e.key == K_ESCAPE:
+                            pygame.quit()
+
+            pygame.display.flip()                        
+
+def main_game_loop(running):
     pygame.display.set_caption("SPACE BEHOLDERS")
     pygame.mouse.set_visible(False)
     pygame.event.set_grab(True)
-    
+
+    if SOUND > 0: 
+        pygame.mixer.music.load(path.join(SOUND_FOLDER,"space track.ogg"))
+        pygame.mixer.music.play(loops = -1)        
+
     while running:
-        if splash: 
-            Splashscreen().run()      
-        splash = False
-
-        if game: 
-            Game().run()     
-        game = False
-
-        if firstrun:
-            score = SCORE
-            accbonus = ACCBONUS
-            firstrun = False
-
-        SCREEN.fill(BLACK)
+        Splashscreen().run() 
+        PlayGame().run() 
+        End_Game_Screen().run()
+        # if firstrun:
+        #     score = SCORE
+        #     accbonus = ACCBONUS
+        #     firstrun = False  
         
-        if timer <=0:
-            GAMEFONT.render_to(SCREEN, (390,410), "Press 'esc' to quit", RED, None, size=20)
-            GAMEFONT.render_to(SCREEN, (340,450), "Press 'any key' to continue", RED, None, size=20)
-        else:
-            timer -= 1
-
-        for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                if timer <=0:
-                    running = False
-
-            if e.type == pygame.KEYDOWN:
-                if e.key == K_ESCAPE:
-                        running = False
-                else:
-                    if timer <=0:
-                        firstrun = True
-                        timer = 2000
-                        splash = True
-                        game = True           
-
-        if QUIT:
-            final_message = "You Quit!"
-        else:
-            final_message = "You Died!"
-        
-        if timer < 1500 and accbonus >= 0:
-            accbonus -= 1
-            if score > 0:
-                score += 1
-            else:
-                score -=1
-        
-        GAMEFONT.render_to(SCREEN, (400,300), final_message, RED, None, size=40)
-        GAMEFONT.render_to(SCREEN, (350,350), "Final Score: " + str(score), RED, None, size=40)
-
-        pygame.display.flip()
-
+        # if timer < 1500 and accbonus >= 0:
+        #     accbonus -= 1
+        #     if score > 0:
+        #         score += 1
+        #     else:
+        #         score -=1
+    
     pygame.quit()
 
-main()
+main_game_loop(True)
