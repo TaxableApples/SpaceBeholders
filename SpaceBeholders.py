@@ -7,15 +7,14 @@ import random as rd
 import numpy as np
 from os import path
 
-pygame.freetype.init()
 pygame.init()
-pygame.event.set_grab(True)
+pygame.freetype.init()
 
 WIDTH, HEIGHT = 1024, 768
 DEBUG = True
-PENALTY = [0]
-ACCBONUS = 0
-SCORE = 0
+#PENALTY = [0]
+#ACCBONUS = 0
+#SCORE = 0
 SOUND = 1
 GAME_FOLDER = path.dirname(__file__)
 RESOURCES_FOLDER = path.join(GAME_FOLDER, "resources")
@@ -24,6 +23,7 @@ SOUND_FOLDER = path.join(RESOURCES_FOLDER, "audio")
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "Retro Gaming.ttf"), 22)
 
+#compensating for pygames flaws
 try:
     pygame.mixer.init()
 except:
@@ -158,7 +158,7 @@ class Playerdamage(pygame.sprite.Sprite):
 class Particles(pygame.sprite.Sprite):
     def __init__(self, x, y, xspeed, yspeed, color, lifespan):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((rd.randint(1,4),(rd.randint(1,4))))
+        self.image = pygame.Surface((rd.randint(1,6),(rd.randint(1,6))))
         self.random = rd.randint(0,1)
         self.image.fill(color)
         self.image.set_colorkey((0,0,0)) 
@@ -181,7 +181,7 @@ class Particles(pygame.sprite.Sprite):
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((4,4))
+        self.image = pygame.Surface((6,6))
         self.image.fill((0,255,0))
         self.image.set_colorkey((0,0,0))     
         self.radius = 4.5
@@ -232,52 +232,36 @@ class Healthbar(pygame.sprite.Sprite):
 class Alien(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image1 = Alien_sheet().get_image(0,0)
-        self.image2 = Alien_sheet().get_image(0,1)
-        self.image3 = Alien_sheet().get_image(0,2)
-        self.image4 = Alien_sheet().get_image(0,3)
-        self.image5 = Alien_sheet().get_image(0,4)
-        self.image6 = Alien_sheet().get_image(0,5)
-        self.image7 = Alien_sheet().get_image(0,6)
-        self.image8 = Alien_sheet().get_image(0,7)
-        self.image9 = Alien_sheet().get_image(0,8)
-        self.image10 = Alien_sheet().get_image(0,9)
-        self.image = self.image1
+        self.images = []
+        for i in range(11):
+            self.images.append(Alien_sheet().get_image(0,i))
+        self.image = self.images[0]
         self.rect = self.image.get_rect()
+        self.death = False
+        self.deathtimer = 14
         self.radius = 44
         self.rect.x = rd.randrange(0, WIDTH - self.rect.width)
         self.rect.y = rd.randrange(-100, -40)
         self.speedy = rd.randrange(1, 8)
         self.speedx = rd.randrange(-3, 3)
-        self.penalty = 0
+        #self.penalty = 0
         self.last_update = pygame.time.get_ticks()
-    
+        
     def update_image(self):
         now = pygame.time.get_ticks()
-
-        if now - self.last_update > 80:
-            if self.image == self.image1:
-                self.image = self.image2
-            elif self.image == self.image2:
-                self.image = self.image3
-            elif self.image == self.image3:
-                self.image = self.image4
-            elif self.image == self.image4:
-                self.image = self.image5
-            elif self.image == self.image5:
-                self.image = self.image6
-            elif self.image == self.image6:
-                self.image = self.image7
-            elif self.image == self.image7:
-                self.image = self.image8
-            elif self.image == self.image8:
-                self.image = self.image9
-            elif self.image == self.image9:
-                self.image = self.image10
-            elif self.image == self.image10:
-                self.image = self.image1
-
-            self.last_update = now
+        if self.death == False:
+            if now - self.last_update > 80:
+                r = rd.randint(0,8)
+                self.image = self.images[r]
+                self.last_update = now
+        
+        if self.death == True:
+            self.deathtimer -= 1.5
+            if self.deathtimer > 0:
+                r = rd.randint(9,10)
+                self.image = self.images[r]
+            if self.deathtimer <= 0:
+                self.kill()
     
     def update(self):
         self.update_image()
@@ -285,62 +269,14 @@ class Alien(pygame.sprite.Sprite):
         self.rect.x += self.speedx
 
         if self.rect.top > HEIGHT + 10:
-            self.penalty = rd.randint(5,20)
+            #self.penalty = rd.randint(5,20)
             self.rect.x = rd.randrange(0, WIDTH - self.rect.width)
             self.rect.y = rd.randrange(-600, -300)
             self.speedy = rd.randrange(1, 8)
-            PENALTY.append(self.penalty)
+            #PENALTY.append(self.penalty)
 
         if self.rect.left < 0 or self.rect.right > WIDTH:
             self.speedx = -self.speedx
-
-class AlienDeath(pygame.sprite.Sprite):
-    def __init__(self, x, y, velx, vely):
-        pygame.sprite.Sprite.__init__(self)
-        
-        self.image1 = Alien_sheet().get_image(1,0)
-        self.image2 = Alien_sheet().get_image(1,1)
-        self.image3 = Alien_sheet().get_image(1,2)
-        self.image4 = Alien_sheet().get_image(1,3)
-        self.image5 = Alien_sheet().get_image(1,4)
-        self.image6 = Alien_sheet().get_image(1,5)
-        self.image7 = Alien_sheet().get_image(1,6)
-        self.image8 = Alien_sheet().get_image(1,7)
-        self.image9 = Alien_sheet().get_image(1,8)
-        self.image10 = Alien_sheet().get_image(1,9)
-
-        self.image = self.image1
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        self.timer = 30
-        self.speedx = velx
-        self.speedy = vely
-
-    def update(self):
-        self.rect.y += self.speedy
-        self.rect.x += self.speedx
-        self.timer -= 1.5
-        if self.timer <= 29:
-            self.image = self.image1
-        if self.timer <= 25:
-            self.image = self.image2
-        if self.timer <= 20:
-            self.image = self.image3
-        if self.timer <= 15:
-            self.image = self.image4
-        if self.timer <= 10:
-            self.image = self.image5
-        if self.timer <= 5:
-            self.image = self.image6
-        if self.timer <= 0:
-            self.image = self.image7
-        if self.timer <= -5:
-            self.image = self.image8
-        if self.timer <= -10:
-            self.image = self.image9
-        if self.timer <= -15:
-            self.kill()
             
 class Asteroid(pygame.sprite.Sprite):
     def __init__(self, x):
@@ -459,7 +395,7 @@ class Splashscreen(object):
                     pygame.time.set_timer(pygame.KEYDOWN, 0)
                 if e.type == pygame.KEYDOWN:
                         if e.key == K_ESCAPE:
-                            main_game_loop(False)
+                            Main().run(False)
 
             SCREEN.fill((0,0,0))
             SCREEN.blit(self.logo, (440, 200))
@@ -469,10 +405,38 @@ class Splashscreen(object):
             GAMEFONT.render_to(SCREEN, (330, 650), "Press the Spacebar to pause", (255,0,0), None, size=22)
             pygame.display.flip()
 
-class PlayGame(object):
+class End_Game_Screen(object):
     def __init__(self):
         self.running = True
-        self.score = 0
+        self.timer = 1200
+
+    def run(self):
+        while self.running:
+            SCREEN.fill((0,0,0))
+            GAMEFONT.render_to(SCREEN, (400,300), f"GAME OVER", (255,0,0), None, size=40)
+            #GAMEFONT.render_to(SCREEN, (350,350), "Final Score: " + str(score), (255,0,0), None, size=40)
+            
+            if self.timer > 0:
+                self.timer -= 1
+
+            if self.timer <= 0:
+                GAMEFONT.render_to(SCREEN, (390,410), "Press 'esc' to quit", (255,0,0), None, size=20)
+                GAMEFONT.render_to(SCREEN, (340,450), "Press 'any key' to continue", (255,0,0), None, size=20)
+                for e in pygame.event.get():
+                    if e.type == pygame.KEYDOWN:
+                        self.running = False
+                        pygame.time.set_timer(pygame.KEYDOWN, 0)
+
+                    if e.type == pygame.KEYDOWN:
+                        if e.key == K_ESCAPE:
+                            pygame.quit()
+
+            pygame.display.flip()  
+
+class Gameplay(object):
+    def __init__(self):
+        self.running = True
+        #self.score = 0
         self.deaths = -1
         self.level = 4
         self.timer = 00
@@ -489,7 +453,6 @@ class PlayGame(object):
         self.bullets = pygame.sprite.Group()
         self.asteroids = pygame.sprite.Group()
         self.fx = pygame.sprite.Group()
-        self.debris = pygame.sprite.Group()
         self.ship = pygame.sprite.Group()
         self.powerup = pygame.sprite.Group()
         self.player = Player()
@@ -502,19 +465,20 @@ class PlayGame(object):
         self.all.add(self.cursor)
 
     def run(self):
+
         def timed_and_random_events():
             self.clock.tick(self.fps)
 
             if self.start:
-                self.start = False
-
                 for _ in range(self.level):
                     self.m = Alien()
                     self.all.add(self.m)
                     self.enemies.add(self.m)
+                self.start = False
 
             if self.timer < 0.0:
                 self.timer = 20.00
+
             self.bullet_timer -= 0.025
             self.timer = round(self.timer - .01, 2)
             self.random = rd.randint(1,10000)
@@ -532,16 +496,17 @@ class PlayGame(object):
                 self.healthpack = Healthpack()
                 self.powerup.add(self.healthpack)
                 self.all.add(self.healthpack)
+            
+            if int(self.clock.get_fps()) > 59:
+                r = rd.randint(5,255)
+                self.stars = Particles(rd.randint(0,WIDTH),0,0,rd.randint(5,10),(r,r,r),1000)
+                self.all.add(self.stars)
 
         def player_controls():
             for e in pygame.event.get():
                 if e.type == pygame.KEYDOWN:
                     if e.key == K_ESCAPE:
                         self.running = False
-                        global QUIT
-                        QUIT = True
-                    else:
-                        QUIT = False
 
                 if e.type == pygame.MOUSEBUTTONDOWN:
                     self.bullet_timer = 0
@@ -572,28 +537,96 @@ class PlayGame(object):
                             if e.type == pygame.KEYDOWN:
                                 self.pause = False
 
-        def enemy_hit_by_bullet():
+        def win_lose_game():
+            if self.player.health <= 0:
+                self.running = 0
+
+            # if len(PENALTY) > 1:
+            #     self.score -= PENALTY[1]
+            #     PENALTY.pop()
+
+            if self.accuracy[1] != 0:
+                self.acccalc = self.accuracy[0] * 1.0 / self.accuracy[1]*100
+        
+        def go_to_next_level():
+            if self.timer == 0:
+                levelup = True
+                newlevel = self.level + 1
+                while levelup:
+                    SCREEN.fill((0,0,0))
+                    GAMEFONT.render_to(SCREEN, (100,470), "Press Any Key to Continue to Level: " + str(self.level - 3), (255,0,0), None, size=40)
+                    # GAMEFONT.render_to(SCREEN, (400,550), "SCORE: " + str(self.score), (255,0,0), None, size=40)
+                    
+                    if self.level != newlevel:
+                        self.level += 1
+                        for _ in range(self.level):
+                            m = Alien()
+                            self.all.add(m)
+                            self.enemies.add(m)
+                    
+                    for e in pygame.event.get():
+                        if e.type == pygame.KEYDOWN:
+                            levelup = False
+                    pygame.display.flip()
+        
+        def draw_to_screen():
+            SCREEN.fill((0,0,0))
+            SCREEN.blit(self.healthbar.image,(5,5))
+            for i in range(self.player.health):
+                SCREEN.blit(self.healthbar.health, (i+8,8))
+
+            GAMEFONT.render_to(SCREEN, (875,15), "'Esc' to Quit", (255,0,0), None, size=18)
+            #GAMEFONT.render_to(SCREEN, (200,700), "Score: " + str(self.score), (255,0,0), None, size=18)            
+            GAMEFONT.render_to(SCREEN, (10,700), "Level: " + str(self.level - 3), (255,0,0), None, size=18)
+            GAMEFONT.render_to(SCREEN, (400,700), "Round: " + str(self.timer), (255,0,0), None, size=18) 
+            GAMEFONT.render_to(SCREEN, (700,700), "Accuracy: " + str(round(self.acccalc, 2)) + "%", (255,0,0), None, size=18)          
+            if self.timer < 3.0:
+                GAMEFONT.render_to(SCREEN, (500,300), str(int(self.timer)), (255,0,0), None, size=40)
+
+            self.all.draw(SCREEN)
+
+            if DEBUG:
+                #pygame.draw.circle(SCREEN, (0,255,0), (self.player.rect.centerx, self.player.rect.centery), 42, 1)
+                #for sprite in self.asteroids:
+                #    pygame.draw.circle(SCREEN, (255,0,0), (sprite.rect.centerx, sprite.rect.centery), 44, 1)
+                #for sprite in self.enemies:
+                #    pygame.draw.circle(SCREEN, (255,0,0), (sprite.rect.centerx, sprite.rect.centery), 44, 1)
+                GAMEFONT.render_to(SCREEN, (250,10), "DEBUG MODE ON", (255,0,0), None, size=18)
+                GAMEFONT.render_to(SCREEN, (10,650), "Enemies: " + str(len(self.enemies)), (255,0,0), None, size=18)   
+                GAMEFONT.render_to(SCREEN, (700,650), str(self.clock), (255,0,0), None, size=18)
+        
+        # def set_score():
+            # global SCORE 
+            # SCORE = self.score  
+
+            # global ACCBONUS
+            # ACCBONUS = self.acccalc * 10 * (self.level - 3)
+
+        #Collisions
+        def player_shoot_enemy():
                 enemy_hit_by_bullet = pygame.sprite.groupcollide(self.bullets, self.enemies, False, False)
                 for sprite in enemy_hit_by_bullet:
-                    ex = sprite.rect.x
-                    ey = sprite.rect.y
-                    r = rd.randint(3,6)
-                    for _ in range(r):
-                        laser = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
-                        blood = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), ((rd.randint(100,255)),0,0), rd.randint(25,100))
-                        purplegoo = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (147,112,219), rd.randint(25,100))
-                        self.all.add(laser, blood, purplegoo)
+                    bulletx = sprite.rect.x
+                    bullety = sprite.rect.y
+                    bulletvely = sprite.velocity[1]
+                    enemy_gets_shot(bulletx, bullety, bulletvely)
         
-        def player_shoot_enemy():
-            player_shoot_enemy = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
+        def enemy_gets_shot(bulletx, bullety, bulletvely):
+            player_shoot_enemy = pygame.sprite.groupcollide(self.enemies, self.bullets, False, True)
             for sprite in player_shoot_enemy:
-                if dict[sprite]:
-                    d = AlienDeath(sprite.rect.x, sprite.rect.y, sprite.speedx, sprite.speedy)
-                    if SOUND > 0: 
-                        pygame.mixer.Channel(1).play(pygame.mixer.Sound(path.join(SOUND_FOLDER, "explosion.ogg")))
-                    self.all.add(d)
-                    self.score += rd.randint(5,20)
-                    self.accuracy[0] += 1
+                if SOUND > 0: 
+                    pygame.mixer.Channel(1).play(pygame.mixer.Sound(path.join(SOUND_FOLDER, "explosion.ogg")))
+
+                sprite.death = True
+                r = rd.randint(3,6)
+                for _ in range(r):
+                    laser = Particles(bulletx, bullety, rd.randint(-5,5), rd.randint(-2,2) + bulletvely + sprite.speedy, (0,rd.randint(100,255),0), rd.randint(25,100))
+                    blood = Particles(bulletx, bullety, rd.randint(-5,5), rd.randint(-1,1) + sprite.speedy, (rd.randint(100,255),0,0), rd.randint(25,100))
+                    purplegoo = Particles(bulletx, bullety, rd.randint(-5,5), rd.randint(-1,1) + sprite.speedy, (147,112,219), rd.randint(25,100))
+                    self.all.add(laser, blood, purplegoo)
+
+                #self.score += rd.randint(5,20)
+                self.accuracy[0] += 1
                     
                 if self.timer > 5.0 and len(self.enemies) <= self.level:
                     m = Alien()
@@ -603,13 +636,13 @@ class PlayGame(object):
         def player_shoot_asteroid():
             player_shoot_asteroid = pygame.sprite.groupcollide(self.bullets, self.asteroids, True, False)
             for sprite in player_shoot_asteroid:
-                ex = sprite.rect.x  
-                ey = sprite.rect.y
+                x = sprite.rect.x  
+                y = sprite.rect.y
                 r = rd.randint(3,6)
                 for i in range(r):
-                    pA = Particles(ex, ey, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
-
-                    self.all.add(pA)
+                    laser_particles = Particles(x, y, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
+                    rock_particles = Particles(x, y, rd.randint(-5,5), rd.randint(-5,5), (220,220,220), rd.randint(25,100))
+                    self.all.add(laser_particles, rock_particles)
         
         def player_health_pickup():
             player_health_pickup = pygame.sprite.spritecollide(self.player, self.powerup, True, pygame.sprite.collide_circle)
@@ -643,81 +676,10 @@ class PlayGame(object):
                     self.all.add(d)
                     self.fx.add(d)
         
-        def win_lose_game():
-            if self.player.health <= 0:
-                self.running = 0
-
-            if len(PENALTY) > 1:
-                self.score -= PENALTY[1]
-                PENALTY.pop()
-
-            if self.accuracy[1] != 0:
-                self.acccalc = self.accuracy[0] * 1.0 / self.accuracy[1]*100
-        
-        def go_to_next_level():
-            if self.timer == 0:
-                levelup = True
-                newlevel = self.level + 1
-                while levelup:
-                    SCREEN.fill((0,0,0))
-                    GAMEFONT.render_to(SCREEN, (100,470), "Press Any Key to Continue to Level: " + str(self.level - 3), (255,0,0), None, size=40)
-                    GAMEFONT.render_to(SCREEN, (400,550), "SCORE: " + str(self.score), (255,0,0), None, size=40)
-                    
-                    if self.level != newlevel:
-                        self.level += 1
-                        for _ in range(self.level):
-                            m = Alien()
-                            self.all.add(m)
-                            self.enemies.add(m)
-                    
-                    for e in pygame.event.get():
-                        if e.type == pygame.KEYDOWN:
-                            levelup = False
-                    pygame.display.flip()
-        
-        def draw_to_screen():
-            SCREEN.fill((0,0,0))
-            SCREEN.blit(self.healthbar.image,(5,5))
-            for i in range(self.player.health):
-                SCREEN.blit(self.healthbar.health, (i+8,8))
-
-            GAMEFONT.render_to(SCREEN, (875,15), "'Esc' to Quit", (255,0,0), None, size=18)
-            GAMEFONT.render_to(SCREEN, (200,700), "Score: " + str(self.score), (255,0,0), None, size=18)            
-            GAMEFONT.render_to(SCREEN, (10,700), "Level: " + str(self.level - 3), (255,0,0), None, size=18)
-            GAMEFONT.render_to(SCREEN, (400,700), "Round: " + str(self.timer), (255,0,0), None, size=18) 
-            GAMEFONT.render_to(SCREEN, (700,700), "Accuracy: " + str(round(self.acccalc, 2)) + "%", (255,0,0), None, size=18)          
-            if self.timer < 3.0:
-                GAMEFONT.render_to(SCREEN, (500,300), str(int(self.timer)), (255,0,0), None, size=40)
-
-            if int(self.clock.get_fps()) > 58:
-                self.newdebris = SpaceDebris()
-                self.debris.add(self.newdebris)
-                self.all.add(self.newdebris)
-
-            self.all.draw(SCREEN)
-
-            if DEBUG:
-                #pygame.draw.circle(SCREEN, (0,255,0), (self.player.rect.centerx, self.player.rect.centery), 42, 1)
-                #for sprite in self.asteroids:
-                #    pygame.draw.circle(SCREEN, (255,0,0), (sprite.rect.centerx, sprite.rect.centery), 44, 1)
-                #for sprite in self.enemies:
-                #    pygame.draw.circle(SCREEN, (255,0,0), (sprite.rect.centerx, sprite.rect.centery), 44, 1)
-                GAMEFONT.render_to(SCREEN, (250,10), "DEBUG MODE ON", (255,0,0), None, size=18)
-                GAMEFONT.render_to(SCREEN, (10,650), "Enemies: " + str(len(self.enemies)), (255,0,0), None, size=18)   
-                GAMEFONT.render_to(SCREEN, (700,650), str(self.clock), (255,0,0), None, size=18)
-        
-        def set_score():
-            global SCORE 
-            SCORE = self.score  
-
-            global ACCBONUS
-            ACCBONUS = self.acccalc * 10 * (self.level - 3)
-
         while self.running:       
             timed_and_random_events()
             player_controls()
             pause_game()
-            enemy_hit_by_bullet()
             player_shoot_enemy()
             player_shoot_asteroid()
             player_health_pickup()
@@ -729,61 +691,38 @@ class PlayGame(object):
             self.all.update()
             pygame.display.flip()
 
-        set_score()
+        # set_score()                      
 
-class End_Game_Screen(object):
+class Main(object):
     def __init__(self):
-        self.running = True
-        self.timer = 1200
+        pygame.display.set_caption("SPACE BEHOLDERS")
+        pygame.mouse.set_visible(False)
 
-    def run(self):
-        while self.running:
-            SCREEN.fill((0,0,0))
-            GAMEFONT.render_to(SCREEN, (400,300), f"GAME OVER", (255,0,0), None, size=40)
-            #GAMEFONT.render_to(SCREEN, (350,350), "Final Score: " + str(score), (255,0,0), None, size=40)
-            
-            if self.timer > 0:
-                self.timer -= 1
-
-            if self.timer <= 0:
-                GAMEFONT.render_to(SCREEN, (390,410), "Press 'esc' to quit", (255,0,0), None, size=20)
-                GAMEFONT.render_to(SCREEN, (340,450), "Press 'any key' to continue", (255,0,0), None, size=20)
-                for e in pygame.event.get():
-                    if e.type == pygame.KEYDOWN:
-                        self.running = False
-                        pygame.time.set_timer(pygame.KEYDOWN, 0)
-
-                    if e.type == pygame.KEYDOWN:
-                        if e.key == K_ESCAPE:
-                            pygame.quit()
-
-            pygame.display.flip()                        
-
-def main_game_loop(running):
-    pygame.display.set_caption("SPACE BEHOLDERS")
-    pygame.mouse.set_visible(False)
-    pygame.event.set_grab(True)
-
-    if SOUND > 0: 
-        pygame.mixer.music.load(path.join(SOUND_FOLDER,"space track.ogg"))
-        pygame.mixer.music.play(loops = -1)        
-
-    while running:
-        Splashscreen().run() 
-        PlayGame().run() 
-        End_Game_Screen().run()
-        # if firstrun:
-        #     score = SCORE
-        #     accbonus = ACCBONUS
-        #     firstrun = False  
+        # disallow the sharing of input devices with other applications
+        pygame.event.set_grab(True)
         
-        # if timer < 1500 and accbonus >= 0:
-        #     accbonus -= 1
-        #     if score > 0:
-        #         score += 1
-        #     else:
-        #         score -=1
-    
-    pygame.quit()
 
-main_game_loop(True)
+        if SOUND > 0: 
+            pygame.mixer.music.load(path.join(SOUND_FOLDER,"space track.ogg"))
+            pygame.mixer.music.play(loops = -1)
+    
+    def run(self, running):
+        while running:
+            Splashscreen().run() 
+            Gameplay().run() 
+            End_Game_Screen().run()
+            # if firstrun:
+            #     score = SCORE
+            #     accbonus = ACCBONUS
+            #     firstrun = False  
+            
+            # if timer < 1500 and accbonus >= 0:
+            #     accbonus -= 1
+            #     if score > 0:
+            #         score += 1
+            #     else:
+            #         score -=1
+    
+Main().run(True)
+
+pygame.quit()
