@@ -336,44 +336,6 @@ class Cursor(pygame.sprite.Sprite):
         self.rect.x = x - 35
         self.rect.y = y - 35
 
-class Splashscreen(object):
-    def __init__(self):
-        self.running = True
-        self.all = pygame.sprite.Group()
-        self.logo = Alien_Sprite_sheet().get_image(0,1)
-        self.logo.set_colorkey((255,255,255))
-        self.fps = 60
-        self.clock = pygame.time.Clock()
-
-    def run(self):
-        self.clock.tick(self.fps)
-
-        while self.running:
-            for e in pygame.event.get():
-                if e.type == pygame.KEYDOWN:
-                    if e.key == K_ESCAPE:
-                            self.running = False
-                            Main().run(False)
-                    self.running = False
-                    pygame.time.set_timer(pygame.KEYDOWN, 0)
-
-            if int(self.clock.get_fps()) > 59:
-                r = rd.randint(5,255)
-                self.stars = Particles(rd.randint(0,WIDTH),0,0,rd.randint(5,10),(r,r,r),1000)
-                self.all.add(self.stars)
-
-            SCREEN.fill((0,0,0))
-            SCREEN.blit(self.logo, (592, 200))
-
-            GAMEFONT.render_to(SCREEN, (298,HEIGHT / 2), "SPACE BEHOLDERS", (255,0,0), None, size=64)
-            GAMEFONT.render_to(SCREEN, (496 , 500), "Press Any Key to Play", (255,0,0), None, size=22)
-            GAMEFONT.render_to(SCREEN, (298 , 600), "Use Mouse to aim and shoot, Use keys A,S,D,W to fly", (255,0,0), None, size=22)
-            GAMEFONT.render_to(SCREEN, (444, 650), "Press the Spacebar to pause", (255,0,0), None, size=22)
-            self.all.update()
-            SCREEN.set_alpha(0)
-            self.all.draw(SCREEN)
-            pygame.display.flip()
-
 class Scene_Fade_In(pygame.sprite.Sprite):
     def __init__(self, timer):
         pygame.sprite.Sprite.__init__(self)
@@ -390,6 +352,82 @@ class Scene_Fade_In(pygame.sprite.Sprite):
             self.image.set_alpha(self.timer)
         if self.timer < 0:
             self.kill()
+
+class Scene_Fade_Out(pygame.sprite.Sprite):
+    def __init__(self, maxtime):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((WIDTH,HEIGHT))
+        self.image.fill((0,0,0))
+        self.rect = self.image.get_rect()
+        self.rect.centerx = WIDTH/2 + 20
+        self.rect.centery = HEIGHT/2 + 20
+        self.maxtime = maxtime
+        self.timer = 0
+
+    def update(self):
+        self.timer += 5
+        if self.timer < 300:
+            self.image.set_alpha(self.timer)
+
+
+class Splashscreen(object):
+    def __init__(self):
+        self.running = True
+        self.all = pygame.sprite.Group()
+        self.logo = Alien_Sprite_sheet().get_image(0,1)
+        self.logo.set_colorkey((255,255,255))
+        self.fps = 60
+        self.clock = pygame.time.Clock()
+        self.fade = pygame.sprite.Group()
+        self.fadetimer = 100
+        self.setfadeout = False
+        self.fadeout = Scene_Fade_Out(self.fadetimer)
+        
+    def run(self):
+
+        def player_controls():
+            for e in pygame.event.get():
+                if e.type == pygame.KEYDOWN:
+                    if e.key == K_ESCAPE:
+                            self.running = False
+                            Main().run(False)
+                    else:
+                        if self.setfadeout == False:
+                            self.setfadeout = True
+                            self.all.add(self.fadeout)
+                            pygame.time.set_timer(pygame.KEYDOWN, 0)
+
+        def timed_events():
+            self.clock.tick(self.fps)
+            if int(self.clock.get_fps()) > 59:
+                r = rd.randint(5,255)
+                self.stars = Particles(rd.randint(0,WIDTH),0,0,rd.randint(5,10),(r,r,r),1000)
+                self.all.add(self.stars)
+
+
+            if self.setfadeout == True:
+                self.fadetimer -= 1
+            
+            if self.fadetimer <= 0:
+                self.running = False
+
+        def draw_to_screen():
+            SCREEN.fill((0,0,0))
+            SCREEN.blit(self.logo, (592, 200))
+
+            GAMEFONT.render_to(SCREEN, (298,HEIGHT / 2), "SPACE BEHOLDERS", (255,0,0), None, size=64)
+            GAMEFONT.render_to(SCREEN, (496 , 500), "Press Any Key to Play", (255,0,0), None, size=22)
+            GAMEFONT.render_to(SCREEN, (298 , 600), "Use Mouse to aim and shoot, Use keys A,S,D,W to fly", (255,0,0), None, size=22)
+            GAMEFONT.render_to(SCREEN, (444, 650), "Press the Spacebar to pause", (255,0,0), None, size=22)
+            self.all.update()
+            SCREEN.set_alpha(0)
+            self.all.draw(SCREEN)
+
+        while self.running:          
+            player_controls()
+            timed_events()
+            draw_to_screen()
+            pygame.display.flip()
 
 class End_Game_Screen(object):
     def __init__(self):
@@ -434,7 +472,6 @@ class Gameplay(object):
         self.fadein_delay = True
         self.start = True
         self.fps = 60
-        #self.spawn = pygame.USEREVENT + 1
         self.clock = pygame.time.Clock()
         self.all = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
@@ -457,6 +494,9 @@ class Gameplay(object):
         def timed_and_random_events():
             self.clock.tick(self.fps)
 
+            if self.timer < 0.0:
+                self.timer = 20.00
+
             if self.fadein_delay == True:
                 self.timer = 20.01
            
@@ -472,9 +512,6 @@ class Gameplay(object):
                     self.all.add(enemy)
                     self.enemies.add(enemy)
                 self.start = False
-
-            if self.timer < 0.0:
-                self.timer = 20.00
 
             self.bullet_timer -= 0.025
             self.timer = round(self.timer - .01, 2)
