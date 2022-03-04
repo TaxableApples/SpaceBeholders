@@ -13,7 +13,7 @@ pygame.init()
 pygame.freetype.init()
 
 WIDTH, HEIGHT = 1280, 720
-DEBUG, DEBUG_SAFE = False, True
+DEBUG, DEBUG_SAFE = False, False
 SOUND = True
 SCORE = 0
 GAME_FOLDER = path.dirname(__file__)
@@ -425,9 +425,8 @@ class Gameplay(object):
         self.running = True
         self.score = 0
         self.score_display = 0
-        self.deaths = -1
         self.level = 4
-        self.timer = 00
+        self.timer = 0
         self.accuracy = [0,0]
         self.acccalc = 0
         self.pause = False
@@ -435,7 +434,7 @@ class Gameplay(object):
         self.fadein_delay = True
         self.start = True
         self.fps = 60
-        self.spawn = pygame.USEREVENT + 1
+        #self.spawn = pygame.USEREVENT + 1
         self.clock = pygame.time.Clock()
         self.all = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
@@ -448,7 +447,6 @@ class Gameplay(object):
         self.healthbar = Healthbar([5,5])
         self.shooting = False
         self.bullet_timer = 0.5
-        self.shoot_if = 0 
         self.fadein = Scene_Fade_In(300)      
         self.fade.add(self.fadein)
         self.all.add(self.player, self.cursor, self.fadein)
@@ -514,17 +512,6 @@ class Gameplay(object):
                 if e.type == pygame.MOUSEBUTTONUP:
                     self.shooting = False
 
-                if self.shooting:
-                    self.bullet_timer -= self.shoot_if
-                    if self.bullet_timer <= 0:
-                        self.bullet_timer = 0.5
-                        self.bullet = Player_Shoot(self.player.rect.centerx, self.player.rect.centery)
-                        self.all.add(self.bullet)
-                        self.bullets.add(self.bullet)
-                        if SOUND: 
-                            pygame.mixer.Channel(0).play(pygame.mixer.Sound(path.join(SOUND_FOLDER, "shoot.ogg")))
-                        self.accuracy[1] += 1
-
                 if e.type == pygame.KEYDOWN:
                     if e.key == K_SPACE:
                         self.pause = True
@@ -534,6 +521,17 @@ class Gameplay(object):
                             for e in pygame.event.get():
                                 if e.type == pygame.KEYDOWN:
                                     self.pause = False
+
+        def player_shoot():
+            if self.shooting:
+                if self.bullet_timer <= 0:
+                    self.bullet_timer = 0.5
+                    self.bullet = Player_Shoot(self.player.rect.centerx, self.player.rect.centery)
+                    self.all.add(self.bullet)
+                    self.bullets.add(self.bullet)
+                    if SOUND: 
+                        pygame.mixer.Channel(0).play(pygame.mixer.Sound(path.join(SOUND_FOLDER, "shoot.ogg")))
+                    self.accuracy[1] += 1
 
         def win_lose_game():
             if self.player.health <= 0:
@@ -654,11 +652,11 @@ class Gameplay(object):
             
             for sprite in player_asteroid_collide:
                 if dict[sprite]:
-                    ex = (sprite.rect.x + self.player.rect.x) / 2    
-                    ey = (sprite.rect.y + self.player.rect.y) / 2
+                    # ex = (sprite.rect.x + self.player.rect.x) / 2    
+                    # ey = (sprite.rect.y + self.player.rect.y) / 2
                     d = Playerdamage(self.player.rect.x, self.player.rect.y)
 
-                    self.all.add(d, e)
+                    self.all.add(d)
         
         def player_enemy_collide():
             player_enemy_collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
@@ -674,6 +672,7 @@ class Gameplay(object):
         while self.running:       
             timed_and_random_events()
             player_controls()
+            player_shoot()
             player_shoot_enemy()
             player_shoot_asteroid()
             player_health_pickup()
