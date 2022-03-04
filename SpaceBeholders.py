@@ -74,6 +74,7 @@ class Player(pygame.sprite.Sprite):
         self.speedy = 0
         self.health = 196
         self.last_update = pygame.time.get_ticks()
+        self._layer = 4
 
     def update_image(self):
         now = pygame.time.get_ticks()
@@ -133,6 +134,7 @@ class Playerdamage(pygame.sprite.Sprite):
         self.rect.x = x
         self.rect.y = y
         self.timer = 60
+        self._layer = 3
     
     def update(self):
         self.timer -= 1
@@ -159,6 +161,7 @@ class Particles(pygame.sprite.Sprite):
         self.yspeed = yspeed
         self.lifespan = lifespan
         self.timer = 0
+        self._layer = 4
 
     def update(self):
         self.timer += 1
@@ -183,6 +186,7 @@ class Player_Shoot(pygame.sprite.Sprite):
         self.vely = mouse_y - self.rect.centery
         self.velocity = np.array([self.velx, self.vely])
         self.velocity = 10 * self.velocity / np.linalg.norm(self.velocity)
+        self._layer = 2
 
     def update(self):
         self.x += self.velocity[0]
@@ -208,6 +212,7 @@ class Healthpack(pygame.sprite.Sprite):
         self.speedy = rd.randint(4,10)
         self.rect.y = -100
         self.rect.x = rd.randint(0,WIDTH)
+        self._layer = 3
 
     def update(self):
         self.rect.y += self.speedy
@@ -221,6 +226,7 @@ class Healthbar(pygame.sprite.Sprite):
         self.health = pygame.image.load(path.join(IMG_FOLDER, "health.png")).convert()
         self.rect = self.image.get_rect()
         self.rect.left, self.rect.top = loc
+        self._layer = 2
 
 class Alien(pygame.sprite.Sprite):
     def __init__(self):
@@ -239,6 +245,7 @@ class Alien(pygame.sprite.Sprite):
         self.speedx = rd.randrange(-3, 3)
         self.penalty = 0
         self.last_update = pygame.time.get_ticks()
+        self._layer = 3
         
     def update_image(self):
         now = pygame.time.get_ticks()
@@ -294,6 +301,7 @@ class Asteroid(pygame.sprite.Sprite):
         self.speedy = rd.randrange(1, 8)
         self.last_update = pygame.time.get_ticks()
         self.random = rd.randint(1, 20)
+        self._layer = 3
         if self.random > 18:
             self.rect.x = x
         else:
@@ -317,7 +325,7 @@ class SpaceDebris(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.y = -100
         self.rect.x = rd.randint(0, WIDTH)
-        self._layer = -1
+        self._layer = -10
 
     def update(self):
         self.rect.y += self.speed
@@ -330,6 +338,7 @@ class Cursor(pygame.sprite.Sprite):
         self.image = pygame.image.load(path.join(IMG_FOLDER, "cursor.png")).convert()
         self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
+        self._layer = 4 
     
     def update(self):
         x, y = pygame.mouse.get_pos()
@@ -345,6 +354,7 @@ class Scene_Fade_In(pygame.sprite.Sprite):
         self.rect.centerx = WIDTH/2 + 20
         self.rect.centery = HEIGHT/2 + 20
         self.timer = timer
+        self._layer = 5
 
     def update(self):
         self.timer -= 1
@@ -363,17 +373,17 @@ class Scene_Fade_Out(pygame.sprite.Sprite):
         self.rect.centery = HEIGHT/2 + 20
         self.maxtime = maxtime
         self.timer = 0
+        self._layer = 5
 
     def update(self):
         self.timer += 5
         if self.timer < 300:
             self.image.set_alpha(self.timer)
 
-
 class Splashscreen(object):
     def __init__(self):
         self.running = True
-        self.all = pygame.sprite.Group()
+        self.all = pygame.sprite.LayeredUpdates()
         self.logo = Alien_Sprite_sheet().get_image(0,1)
         self.logo.set_colorkey((255,255,255))
         self.fps = 60
@@ -473,7 +483,7 @@ class Gameplay(object):
         self.start = True
         self.fps = 60
         self.clock = pygame.time.Clock()
-        self.all = pygame.sprite.Group()
+        self.all = pygame.sprite.LayeredUpdates()
         self.enemies = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
         self.asteroids = pygame.sprite.Group()
@@ -526,7 +536,7 @@ class Gameplay(object):
                 self.exhaust = Particles((self.player.rect.centerx+rd.randint(-25,+25)), (self.player.rect.centery+25), 0, rd.randint(5,10), (255, 165, 0), rd.randint(25,100)) #Orange
                 self.all.add(self.exhaust)
 
-            if self.random > (10003 - self.level):
+            if self.fadein_delay == False and self.random > (10003 - self.level):
                 self.healthpack = Healthpack()
                 self.powerup.add(self.healthpack)
                 self.all.add(self.healthpack)
