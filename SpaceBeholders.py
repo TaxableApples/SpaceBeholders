@@ -13,15 +13,15 @@ pygame.init()
 pygame.freetype.init()
 
 WIDTH, HEIGHT = 1280, 720
-DEBUG = True
-DEBUG_SAFE = True
+DEBUG, DEBUG_SAFE = False, True
 SOUND = True
 SCORE = 0
 GAME_FOLDER = path.dirname(__file__)
 RESOURCES_FOLDER = path.join(GAME_FOLDER, "resources")
 IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
 SOUND_FOLDER = path.join(RESOURCES_FOLDER, "audio")
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN)
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
+#SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN)
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "Retro Gaming.ttf"), 22)
 
 #Compensating for no installed sound card bug in pygame
@@ -173,20 +173,23 @@ class Player_Shoot(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface((6,6))
         self.image.fill((0,255,0))
-        self.image.set_colorkey((0,0,0))     
-        self.radius = 4.5
         self.rect = self.image.get_rect()
         self.rect.centery = y
         self.rect.centerx = x
+        self.x = float(self.rect.centerx)
+        self.y = float(self.rect.centery)
         mouse_x, mouse_y = pygame.mouse.get_pos()
-        self.velx = 20 + mouse_x - self.rect.centerx
-        self.vely = 20 + mouse_y - self.rect.centery
+        self.velx = mouse_x - self.rect.centerx
+        self.vely = mouse_y - self.rect.centery
         self.velocity = np.array([self.velx, self.vely])
         self.velocity = 10 * self.velocity / np.linalg.norm(self.velocity)
-        
+
     def update(self):
-        self.rect.x += self.velocity[0]
-        self.rect.y += self.velocity[1]      
+        self.x += self.velocity[0]
+        self.y += self.velocity[1]  
+        self.rect.x = int(self.x)
+        self.rect.y = int(self.y)  
+
         if self.rect.bottom < 0:
             self.kill()
         if self.rect.top > HEIGHT:
@@ -330,16 +333,21 @@ class Cursor(pygame.sprite.Sprite):
     
     def update(self):
         x, y = pygame.mouse.get_pos()
-        self.rect.x = x - 23
-        self.rect.y = y - 23
+        self.rect.x = x - 35
+        self.rect.y = y - 35
 
 class Splashscreen(object):
     def __init__(self):
         self.running = True
+        self.all = pygame.sprite.Group()
         self.logo = Alien_Sprite_sheet().get_image(0,1)
         self.logo.set_colorkey((255,255,255))
+        self.fps = 60
+        self.clock = pygame.time.Clock()
 
     def run(self):
+        self.clock.tick(self.fps)
+
         while self.running:
             for e in pygame.event.get():
                 if e.type == pygame.KEYDOWN:
@@ -349,12 +357,21 @@ class Splashscreen(object):
                     self.running = False
                     pygame.time.set_timer(pygame.KEYDOWN, 0)
 
+            if int(self.clock.get_fps()) > 59:
+                r = rd.randint(5,255)
+                self.stars = Particles(rd.randint(0,WIDTH),0,0,rd.randint(5,10),(r,r,r),1000)
+                self.all.add(self.stars)
+
             SCREEN.fill((0,0,0))
-            SCREEN.blit(self.logo, (440, 200))
-            GAMEFONT.render_to(SCREEN, (210 ,HEIGHT / 2), "SPACE BEHOLDERS", (255,0,0), None, size=64)
-            GAMEFONT.render_to(SCREEN, (370 , 500), "Press Any Key to Play", (255,0,0), None, size=22)
-            GAMEFONT.render_to(SCREEN, (190 , 600), "Use Mouse to aim and shoot, Use keys A,S,D,W to fly", (255,0,0), None, size=22)
-            GAMEFONT.render_to(SCREEN, (330, 650), "Press the Spacebar to pause", (255,0,0), None, size=22)
+            SCREEN.blit(self.logo, (592, 200))
+
+            GAMEFONT.render_to(SCREEN, (298,HEIGHT / 2), "SPACE BEHOLDERS", (255,0,0), None, size=64)
+            GAMEFONT.render_to(SCREEN, (496 , 500), "Press Any Key to Play", (255,0,0), None, size=22)
+            GAMEFONT.render_to(SCREEN, (298 , 600), "Use Mouse to aim and shoot, Use keys A,S,D,W to fly", (255,0,0), None, size=22)
+            GAMEFONT.render_to(SCREEN, (444, 650), "Press the Spacebar to pause", (255,0,0), None, size=22)
+            self.all.update()
+            SCREEN.set_alpha(0)
+            self.all.draw(SCREEN)
             pygame.display.flip()
 
 class Scene_Fade_In(pygame.sprite.Sprite):
@@ -522,10 +539,6 @@ class Gameplay(object):
             if self.player.health <= 0:
                 self.running = 0
 
-            # if len(PENALTY) > 1:
-            #     self.score -= PENALTY[1]
-            #     PENALTY.pop()
-
             if self.accuracy[1] != 0:
                 self.acccalc = self.accuracy[0] * 1.0 / self.accuracy[1]*100
         
@@ -567,6 +580,16 @@ class Gameplay(object):
             for i in range(self.player.health):
                 SCREEN.blit(self.healthbar.health, (i+8,8))
 
+            if DEBUG:
+                #pygame.draw.circle(SCREEN, (0,255,0), (self.player.rect.centerx, self.player.rect.centery), 42, 1)
+                #for sprite in self.asteroids:
+                #    pygame.draw.circle(SCREEN, (255,0,0), (sprite.rect.centerx, sprite.rect.centery), 44, 1)
+                #for sprite in self.enemies:
+                #    pygame.draw.circle(SCREEN, (255,0,0), (sprite.rect.centerx, sprite.rect.centery), 44, 1)
+                GAMEFONT.render_to(SCREEN, (250,10), "DEBUG MODE ON", (255,0,0), None, size=18)
+                GAMEFONT.render_to(SCREEN, (10,650), "Enemies: " + str(len(self.enemies)), (255,0,0), None, size=18)   
+                GAMEFONT.render_to(SCREEN, (700,650), str(self.clock), (255,0,0), None, size=18)
+
             GAMEFONT.render_to(SCREEN, (875,15), "'Esc' to Quit", (255,0,0), None, size=18)
             GAMEFONT.render_to(SCREEN, (200,700), "Score: " + str(self.score_display), (255,0,0), None, size=18)            
             GAMEFONT.render_to(SCREEN, (10,700), "Level: " + str(self.level - 3), (255,0,0), None, size=18)
@@ -577,17 +600,7 @@ class Gameplay(object):
 
             SCREEN.set_alpha(0)
             self.all.draw(SCREEN)
-
-            if DEBUG:
-                #pygame.draw.circle(SCREEN, (0,255,0), (self.player.rect.centerx, self.player.rect.centery), 42, 1)
-                #for sprite in self.asteroids:
-                #    pygame.draw.circle(SCREEN, (255,0,0), (sprite.rect.centerx, sprite.rect.centery), 44, 1)
-                #for sprite in self.enemies:
-                #    pygame.draw.circle(SCREEN, (255,0,0), (sprite.rect.centerx, sprite.rect.centery), 44, 1)
-                GAMEFONT.render_to(SCREEN, (250,10), "DEBUG MODE ON", (255,0,0), None, size=18)
-                GAMEFONT.render_to(SCREEN, (10,650), "Enemies: " + str(len(self.enemies)), (255,0,0), None, size=18)   
-                GAMEFONT.render_to(SCREEN, (700,650), str(self.clock), (255,0,0), None, size=18)
-        
+                
         def player_shoot_enemy():
                 enemy_hit_by_bullet = pygame.sprite.groupcollide(self.bullets, self.enemies, False, False)
                 for sprite in enemy_hit_by_bullet:
