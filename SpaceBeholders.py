@@ -5,15 +5,13 @@ import numpy as np
 import sys
 
 from pygame.locals import *
-from operator import xor
-from pyexpat.errors import XML_ERROR_SUSPENDED
 from os import path
 
 pygame.init()
 pygame.freetype.init()
 
 #Testing
-DEBUG = True
+DEBUG = False
 SAFE_MODE = False
 FR_TEST_MODE = False
 
@@ -24,8 +22,7 @@ GAME_FOLDER = path.dirname(__file__)
 RESOURCES_FOLDER = path.join(GAME_FOLDER, "resources")
 IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
 SOUND_FOLDER = path.join(RESOURCES_FOLDER, "audio")
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
-#SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN)
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN)
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "Retro Gaming.ttf"), 22)
 
 #Compensating for no installed sound card bug in pygame
@@ -64,12 +61,8 @@ class Alien_Sprite_sheet():
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image0 = Player_Sprite_sheet().get_image(0,0)
-        self.image1 = Player_Sprite_sheet().get_image(0,1)
-        self.image2 = Player_Sprite_sheet().get_image(0,2)
-        self.image3 = Player_Sprite_sheet().get_image(1,0)
-        self.image4 = Player_Sprite_sheet().get_image(1,1)
-        self.image = self.image0
+        self.images = [Player_Sprite_sheet().get_image(0,0), Player_Sprite_sheet().get_image(0,1), Player_Sprite_sheet().get_image(0,2), Player_Sprite_sheet().get_image(1,0), Player_Sprite_sheet().get_image(1,1)]
+        self.image = self.images[0]
         self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
         self.radius = 44
@@ -79,26 +72,20 @@ class Player(pygame.sprite.Sprite):
         self.health = 196
         self.last_update = pygame.time.get_ticks()
         self._layer = 4
+        self.index = -1
 
     def update_image(self):
         now = pygame.time.get_ticks()
+        self.index += 1
+        
+        if self.index > 4:
+            self.index = 0
 
         if now - self.last_update > 80:
-            if self.image == self.image0:
-                self.image = self.image1
-            elif self.image == self.image1:
-                self.image = self.image2
-            elif self.image == self.image2:
-                self.image = self.image3
-            elif self.image == self.image3:
-                self.image = self.image4
-            elif self.image == self.image4:
-                self.image = self.image0
+            self.image = self.images[self.index]
             self.last_update = now
 
-    def update(self):
-        self.update_image()
-        self.rect = self.image.get_rect(center=self.rect.center)
+    def move(self):
         if self.speedx > 0:
             self.speedx -= .08
         if self.speedx < 0:
@@ -127,12 +114,16 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += self.speedx
         self.rect.y += self.speedy
 
+    def update(self):
+        self.update_image()
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.move()
+        
 class Playerdamage(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.image1 = Player_Sprite_sheet().get_image(1,2)
-        self.image2 = Player_Sprite_sheet().get_image(2,0)
-        self.image = self.image1
+        self.images = [Player_Sprite_sheet().get_image(1,2), Player_Sprite_sheet().get_image(2,0)]
+        self.image = self.images[0]
         self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -144,10 +135,10 @@ class Playerdamage(pygame.sprite.Sprite):
         self.timer -= 1
 
         if self.timer > 0:
-            if self.image == self.image1:
-                self.image = self.image2
-            elif self.image == self.image2:
-                self.image = self.image1
+            if self.image == self.images[0]:
+                self.image = self.images[1]
+            elif self.image == self.images[1]:
+                self.image = self.images[0]
         else:
             self.kill()
 
@@ -213,12 +204,7 @@ class Player_Shoot(pygame.sprite.Sprite):
         self.velocity = 10 * self.velocity / np.linalg.norm(self.velocity)
         self._layer = 2
 
-    def update(self):
-        self.x += self.velocity[0]
-        self.y += self.velocity[1]  
-        self.rect.x = int(self.x)
-        self.rect.y = int(self.y)  
-
+    def kill_bullet(self):
         if self.rect.bottom < 0:
             self.kill()
         if self.rect.top > HEIGHT:
@@ -227,6 +213,13 @@ class Player_Shoot(pygame.sprite.Sprite):
             self.kill()
         if self.rect.right > WIDTH:
             self.kill()
+
+    def update(self):
+        self.x += self.velocity[0]
+        self.y += self.velocity[1]  
+        self.rect.x = int(self.x)
+        self.rect.y = int(self.y)  
+        self.kill_bullet()
 
 class Healthpack(pygame.sprite.Sprite):
     def __init__(self):
@@ -256,7 +249,6 @@ class Healthbar(pygame.sprite.Sprite):
 class Alien(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-
         self.images = []
         for i in range(11):
             self.images.append(Alien_Sprite_sheet().get_image(0,i))
@@ -300,7 +292,7 @@ class Alien(pygame.sprite.Sprite):
             self.rect.x = rd.randrange(0, WIDTH - self.rect.width)
             self.rect.y = rd.randrange(-600, -300)
             self.speedy = rd.randrange(1, 8)
-            self.penalty += (self.speedy*15)
+            self.penalty += (self.speedy*1100)
 
     def update(self):
         self.update_image()
@@ -388,18 +380,18 @@ class Scene_Fade_In(pygame.sprite.Sprite):
 class Scene_Fade_Out(pygame.sprite.Sprite):
     def __init__(self, maxtime):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((WIDTH,HEIGHT))
+        self.image = pygame.Surface((WIDTH+20,HEIGHT+20))
         self.image.fill((0,0,0))
         self.rect = self.image.get_rect()
-        self.rect.centerx = WIDTH/2 + 20
-        self.rect.centery = HEIGHT/2 + 20
+        self.rect.centerx = WIDTH/2
+        self.rect.centery = HEIGHT/2
         self.maxtime = maxtime
         self.timer = 0
         self._layer = 5
 
     def update(self):
         self.timer += 5
-        if self.timer < 300:
+        if self.timer < self.maxtime:
             self.image.set_alpha(self.timer)
 
 class Splashscreen(object):
@@ -486,12 +478,12 @@ class End_Game_Screen(object):
 
         def draw_to_screen():
             SCREEN.fill((0,0,0))
-            GAMEFONT.render_to(SCREEN, (400,300), "GAME OVER", (255,0,0), None, size=40)
-            #GAMEFONT.render_to(SCREEN, (350,350), "Final Score: " + str(score), (255,0,0), None, size=40)
+            GAMEFONT.render_to(SCREEN, (495,300), "GAME OVER", (255,0,0), None, size=40)
+            GAMEFONT.render_to(SCREEN, (540,370), "Score: " + str(SCORE) + "!", (255,0,0), None, size=20)
 
             if self.timer <= 0:
-                GAMEFONT.render_to(SCREEN, (390,410), "Press 'esc' to quit", (255,0,0), None, size=20)
-                GAMEFONT.render_to(SCREEN, (340,450), "Press 'any key' to continue", (255,0,0), None, size=20)
+                GAMEFONT.render_to(SCREEN, (505,410), "Press 'esc' to quit", (255,0,0), None, size=20)
+                GAMEFONT.render_to(SCREEN, (455,450), "Press 'any key' to continue", (255,0,0), None, size=20)
 
         while self.running:
             timed_events()
@@ -508,14 +500,17 @@ class Gameplay(object):
         self.level = 4
         self.timer = 0
         self.accuracy = [1,1]
-        self.acccalc = 100
+        self.acccalc = 300
         self.pause = False
         self.start_timer = 5.0
         self.fadein_delay = True
+        self.fadeout = 50
         self.start = True
+        self.die = False
         self.fps = 60
         self.clock = pygame.time.Clock()
         self.all = pygame.sprite.Group()
+        self.fx = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
         self.asteroids = pygame.sprite.Group()
@@ -579,8 +574,9 @@ class Gameplay(object):
 
             if self.random > 8000:
                 self.exhaust = Particles((self.player.rect.centerx+rd.randint(-25,+25)), (self.player.rect.centery+25), 0, rd.randint(5,10), (255, 165, 0), rd.randint(25,100)) #Orange
+                self.fx.add(self.exhaust)
                 self.all.add(self.exhaust)
-            
+         
             if int(self.clock.get_fps()) > 59:
                 r = rd.randint(5,255)
                 self.stars = Particles(rd.randint(0,WIDTH),0,0,rd.randint(5,10),(r,r,r),1000)
@@ -613,7 +609,6 @@ class Gameplay(object):
             self.bullet_timer -= 0.025
             self.timer = round(self.timer - .01, 2)
             
-
             if self.shooting:
                 if self.bullet_timer <= 0:
                     self.bullet_timer = 0.5
@@ -624,9 +619,18 @@ class Gameplay(object):
                         pygame.mixer.Channel(0).play(pygame.mixer.Sound(path.join(SOUND_FOLDER, "shoot.ogg")))
                     self.accuracy[1] += 1
 
-        def win_lose_game():
+        def lose_game():
             if self.player.health <= 0:
-                self.running = 0
+                self.fadeout -= 1
+                if self.die == False:
+                    self.fadeout_display = Scene_Fade_Out(300)
+                    self.all.add(self.fadeout_display)
+                    self.die = True
+                    self.fps = 10
+                    self.player.kill()
+
+                if self.fadeout <= 0:
+                    self.running = 0
 
             if self.accuracy[1] != 0:
                 self.acccalc = self.accuracy[0] * 1.0 / self.accuracy[1]*100
@@ -647,10 +651,10 @@ class Gameplay(object):
                     pygame.display.flip()
         
         def calculate_score():
-            # for sprite in self.enemies:
-            #     if sprite.penalty > 0:
-            #         self.score_display -= int(sprite.penalty*0.10)
-            #         sprite.penalty -= int(sprite.penalty*0.10)
+            for sprite in self.enemies:
+                if sprite.penalty > 0:
+                    self.score_display -= int(sprite.penalty*0.10)
+                    sprite.penalty -= int(sprite.penalty*0.10)
 
             transferscore = int(self.score*0.1)
 
@@ -664,7 +668,7 @@ class Gameplay(object):
             for i in range(self.player.health):
                 SCREEN.blit(self.healthbar.health, (i+28,8))
 
-            GAMEFONT.render_to(SCREEN, (1090,10), "'Esc' to Quit", (255,0,0), None, size=25)
+            GAMEFONT.render_to(SCREEN, (1150,10), "'Esc' to Quit", (255,255,255), None, size=12)
             GAMEFONT.render_to(SCREEN, (35,30), "Score: " + str(self.score_display), (255,255,255), None, size=25)            
             GAMEFONT.render_to(SCREEN, (35,60), "Level: " + str(self.level - 3), (255,255,255), None, size=25)       
             if self.timer < 3.0:
@@ -695,7 +699,11 @@ class Gameplay(object):
 
                 if sprite.death == False:
                     self.accuracy[0] += 1
-                    self.score += abs(15* (sprite.speedy + 1) * (sprite.speedx + 1) * self.acccalc)
+                    mod = 0
+                    if sprite.speedx == 0 or sprite.speedy == 0:
+                        mod = 1
+                    self.score += abs(15* (sprite.speedx+mod) * (sprite.speedy+mod) * self.acccalc)
+
                     if sprite.rect.y > 0:
                         show_hit = Show_Hit_Score(sprite.speedx, sprite.speedy, sprite.rect.x+15, sprite.rect.y+15, (self.score-9))
                         self.all.add(show_hit)
@@ -748,7 +756,7 @@ class Gameplay(object):
         
         def debug_display():
             if DEBUG:
-                GAMEFONT.render_to(SCREEN, (10,575), "DEBUG MODE ON", (255,0,0), None, size=18)
+                GAMEFONT.render_to(SCREEN, (10,550), "DEBUG MODE ON", (255,0,0), None, size=18)
                 GAMEFONT.render_to(SCREEN, (10,600), str(self.clock), (255,0,0), None, size=18)
                 GAMEFONT.render_to(SCREEN, (10,625), "Enemies: " + str(len(self.enemies)), (255,0,0), None, size=18)
                 GAMEFONT.render_to(SCREEN, (10,650), "Round: " + str(self.timer), (255,0,0), None, size=18) 
@@ -767,7 +775,7 @@ class Gameplay(object):
             player_health_pickup()
             player_asteroid_collide()
             player_enemy_collide()
-            win_lose_game()
+            lose_game()
             go_to_next_level()  
             calculate_score()            
             draw_to_screen()
@@ -775,8 +783,9 @@ class Gameplay(object):
             debug_display()
             pygame.display.flip()                
 
+        global SCORE
         SCORE = self.score_display
-        print(SCORE)
+        return SCORE
 
 class Main(object):
     def __init__(self):
