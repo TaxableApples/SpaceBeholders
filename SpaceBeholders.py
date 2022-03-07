@@ -10,7 +10,6 @@ from os import path
 pygame.init()
 pygame.freetype.init()
 
-#Testing
 DEBUG = False
 SAFE_MODE = False
 FR_TEST_MODE = False
@@ -18,21 +17,22 @@ FR_TEST_MODE = False
 WIDTH, HEIGHT = 1280, 720
 SOUND = True
 SCORE = 0
+HIGHSCORE = 0
 GAME_FOLDER = path.dirname(__file__)
 RESOURCES_FOLDER = path.join(GAME_FOLDER, "resources")
 IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
 SOUND_FOLDER = path.join(RESOURCES_FOLDER, "audio")
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN)
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))#, FULLSCREEN)
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "Retro Gaming.ttf"), 22)
 
-#Compensating for no installed sound card bug in pygame
+#Fix no sound card bug in pygame
 try:
     pygame.mixer.init()
 except:
     SOUND = False
     print("Failed to load audio device!")
 
-class Player_Sprite_sheet():
+class Player_Sprite_sheet:
     def __init__(self):        
         self.image = pygame.image.load(path.join(IMG_FOLDER,"ship_pixel.png")).convert()
         self.size = self.image.get_size()
@@ -45,7 +45,7 @@ class Player_Sprite_sheet():
 
         return image
 
-class Alien_Sprite_sheet():
+class Alien_Sprite_sheet:
     def __init__(self):
         self.image = pygame.image.load(path.join(IMG_FOLDER, "beholder_pixel.png")).convert()
         self.size = self.image.get_size()
@@ -71,19 +71,27 @@ class Player(pygame.sprite.Sprite):
         self.speedy = 0
         self.health = 196
         self.last_update = pygame.time.get_ticks()
-        self._layer = 4
-        self.index = -1
+        self._layer = 0
+        self.image_index = 0
+
+        self.light_sm = pygame.image.load(path.join(IMG_FOLDER, "light.png")).convert()
+        self.light_size = self.light_sm.get_size()
+        self.light = pygame.transform.scale(self.light_sm, (self.light_size[0]*2, self.light_size[1]*2))
+        self.light_rect = self.light.get_rect()
+        self.light.set_colorkey((255,255,255))
 
     def update_image(self):
         now = pygame.time.get_ticks()
-        self.index += 1
+        self.image_index += 1
         
-        if self.index > 4:
-            self.index = 0
+        if self.image_index > 4:
+            self.image_index = 0
 
         if now - self.last_update > 80:
-            self.image = self.images[self.index]
+            self.image = self.images[self.image_index]
             self.last_update = now
+
+        SCREEN.blit(self.light, (self.rect.x-WIDTH*2, self.rect.y-HEIGHT*2), special_flags=BLEND_MULT)
 
     def move(self):
         if self.speedx > 0:
@@ -202,7 +210,7 @@ class Player_Shoot(pygame.sprite.Sprite):
         self.vely = mouse_y - self.rect.centery
         self.velocity = np.array([self.velx, self.vely])
         self.velocity = 10 * self.velocity / np.linalg.norm(self.velocity)
-        self._layer = 2
+        self._layer = 1
 
     def kill_bullet(self):
         if self.rect.bottom < 0:
@@ -230,7 +238,7 @@ class Healthpack(pygame.sprite.Sprite):
         self.speedy = rd.randint(4,10)
         self.rect.y = -100
         self.rect.x = rd.randint(0,WIDTH)
-        self._layer = 3
+        self._layer = 0
 
     def update(self):
         self.rect.y += self.speedy
@@ -263,7 +271,7 @@ class Alien(pygame.sprite.Sprite):
         self.speedx = rd.randrange(-3, 3)
         self.penalty = 0
         self.last_update = pygame.time.get_ticks()
-        self._layer = 3
+        self._layer = 0
         
     def update_image(self):
         now = pygame.time.get_ticks()
@@ -339,7 +347,7 @@ class SpaceDebris(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.y = -100
         self.rect.x = rd.randint(0, WIDTH)
-        self._layer = 1
+        self._layer = 0
 
     def update(self):
         self.rect.y += self.speed
@@ -352,7 +360,7 @@ class Cursor(pygame.sprite.Sprite):
         self.image = pygame.image.load(path.join(IMG_FOLDER, "cursor.png")).convert()
         self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
-        self._layer = 4 
+        self._layer = 0
     
     def update(self):
         x, y = pygame.mouse.get_pos()
@@ -408,9 +416,22 @@ class Splashscreen(object):
         self.fadein = Scene_Fade_In(300)
         self.fadeout = Scene_Fade_Out(self.fadetimer)
         self.all.add(self.fadein)
+        self.highscore = 0
+        self.load_score()
+        
+        global HIGHSCORE
+        HIGHSCORE = self.highscore
+ 
+    def load_score(self):
+                try:
+                    with open(path.join(GAME_FOLDER, "gamedata.txt"), "r") as f:
+                        self.highscore = int(str(f.read()))
+                except:
+                    with open(path.join(GAME_FOLDER, "gamedata.txt"), "w") as file:
+                        file.write(str(0))
+                        self.highscore = 0
 
     def run(self):
-
         def player_controls():
             for e in pygame.event.get():
                 if e.type == pygame.KEYDOWN:
@@ -440,7 +461,11 @@ class Splashscreen(object):
             SCREEN.fill((0,0,0))
             SCREEN.blit(self.logo, (592, 200))
 
+            self.hs_text = GAMEFONT.render("High Score: " + str(HIGHSCORE), 1, (0,0,0), size=22)
+            self.center_text = (WIDTH - self.hs_text[1][2]) / 2
+        
             GAMEFONT.render_to(SCREEN, (298,HEIGHT / 2), "SPACE BEHOLDERS", (255,0,0), None, size=64)
+            GAMEFONT.render_to(SCREEN, (self.center_text, 450), "High Score: " + str(HIGHSCORE), (255,0,0), size=22)
             GAMEFONT.render_to(SCREEN, (496 , 500), "Press Any Key to Play", (255,0,0), None, size=22)
             GAMEFONT.render_to(SCREEN, (298 , 600), "Use Mouse to aim and shoot, Use keys A,S,D,W to fly", (255,0,0), None, size=22)
             GAMEFONT.render_to(SCREEN, (444, 650), "Press the Spacebar to pause", (255,0,0), None, size=22)
@@ -448,7 +473,8 @@ class Splashscreen(object):
             SCREEN.set_alpha(0)
             self.all.draw(SCREEN)
 
-        while self.running:          
+        while self.running:  
+                   
             player_controls()
             timed_events()
             draw_to_screen()
@@ -458,6 +484,19 @@ class End_Game_Screen(object):
     def __init__(self):
         self.running = True
         self.timer = 1200
+        self.save_score()
+
+    def save_score(self):
+        print(SCORE, HIGHSCORE)
+        if SCORE > HIGHSCORE:
+            self.highscore = SCORE
+            #GAMEFONT.render_to(SCREEN, (495,300), "NEW HIGH SCORE!", (0,255,0), None, size=30)
+            print(self.highscore)
+            try:
+                with open(path.join(GAME_FOLDER, "gamedata.txt"), "w") as f:
+                    f.write(str(self.highscore))
+            except:
+                print ("I/O Error: Score not saved!")
 
     def run(self):
         def timed_events():
@@ -478,6 +517,8 @@ class End_Game_Screen(object):
 
         def draw_to_screen():
             SCREEN.fill((0,0,0))
+            if SCORE > HIGHSCORE:
+                GAMEFONT.render_to(SCREEN, (419,250), "NEW HIGH SCORE!", (0,255,0), None, size=40)    
             GAMEFONT.render_to(SCREEN, (495,300), "GAME OVER", (255,0,0), None, size=40)
             GAMEFONT.render_to(SCREEN, (540,370), "Score: " + str(SCORE) + "!", (255,0,0), None, size=20)
 
@@ -509,7 +550,7 @@ class Gameplay(object):
         self.die = False
         self.fps = 60
         self.clock = pygame.time.Clock()
-        self.all = pygame.sprite.Group()
+        self.all = pygame.sprite.LayeredUpdates()
         self.fx = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
@@ -662,21 +703,6 @@ class Gameplay(object):
                 self.score -= transferscore
                 self.score_display += transferscore
                 
-        def draw_to_screen():
-            SCREEN.fill((0,0,0))
-            SCREEN.blit(self.healthbar.image,(25,5))
-            for i in range(self.player.health):
-                SCREEN.blit(self.healthbar.health, (i+28,8))
-
-            GAMEFONT.render_to(SCREEN, (1150,10), "'Esc' to Quit", (255,255,255), None, size=12)
-            GAMEFONT.render_to(SCREEN, (35,30), "Score: " + str(self.score_display), (255,255,255), None, size=25)            
-            GAMEFONT.render_to(SCREEN, (35,60), "Level: " + str(self.level - 3), (255,255,255), None, size=25)       
-            if self.timer < 3.0:
-                GAMEFONT.render_to(SCREEN, (470,300), "Next Wave In " + str(int(self.timer)), (255,255,255), None, size=27)
-
-            SCREEN.set_alpha(0)
-            self.all.draw(SCREEN)
-                
         def player_shoot_enemy():
                 enemy_hit_by_bullet = pygame.sprite.groupcollide(self.bullets, self.enemies, False, False)
                 for sprite in enemy_hit_by_bullet:
@@ -754,7 +780,21 @@ class Gameplay(object):
 
                     self.all.add(d)
         
-        def debug_display():
+        def draw_to_screen():
+            SCREEN.fill((0,0,0))
+            self.all.draw(SCREEN)
+
+        def hud_display():
+            SCREEN.blit(self.healthbar.image,(25,5))
+            for i in range(self.player.health):
+                SCREEN.blit(self.healthbar.health, (i+28,8))
+
+            GAMEFONT.render_to(SCREEN, (1150,10), "'Esc' to Quit", (255,255,255), None, size=12)
+            GAMEFONT.render_to(SCREEN, (35,30), "Score: " + str(self.score_display), (255,255,255), None, size=25)            
+            GAMEFONT.render_to(SCREEN, (35,60), "Level: " + str(self.level - 3), (255,255,255), None, size=25)       
+            if self.timer < 3.0:
+                GAMEFONT.render_to(SCREEN, (470,300), "Next Wave In " + str(int(self.timer)), (255,255,255), None, size=27)
+
             if DEBUG:
                 GAMEFONT.render_to(SCREEN, (10,550), "DEBUG MODE ON", (255,0,0), None, size=18)
                 GAMEFONT.render_to(SCREEN, (10,600), str(self.clock), (255,0,0), None, size=18)
@@ -777,10 +817,10 @@ class Gameplay(object):
             player_enemy_collide()
             lose_game()
             go_to_next_level()  
-            calculate_score()            
-            draw_to_screen()
+            calculate_score()
+            draw_to_screen()            
             self.all.update()
-            debug_display()
+            hud_display()
             pygame.display.flip()                
 
         global SCORE
@@ -807,5 +847,5 @@ class Main(object):
     
         pygame.quit()
         sys.exit(0)
-    
+
 Main().run(True)
