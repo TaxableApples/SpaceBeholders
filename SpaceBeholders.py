@@ -22,7 +22,7 @@ GAME_FOLDER = path.dirname(__file__)
 RESOURCES_FOLDER = path.join(GAME_FOLDER, "resources")
 IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
 SOUND_FOLDER = path.join(RESOURCES_FOLDER, "audio")
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))#, FULLSCREEN)
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN, 32)
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "Retro Gaming.ttf"), 22)
 
 #Fix no sound card bug in pygame
@@ -32,22 +32,9 @@ except:
     SOUND = False
     print("Failed to load audio device!")
 
-class Player_Sprite_sheet:
-    def __init__(self):        
-        self.image = pygame.image.load(path.join(IMG_FOLDER,"ship_pixel.png")).convert()
-        self.size = self.image.get_size()
-        self.sheet = pygame.transform.scale(self.image, (int(self.size[0]*4), int(self.size[1]*4)))
-
-    def get_image(self, row, frame):
-        image = pygame.Surface((96, 96))
-        image.blit(self.sheet, (0,0), ((frame * 96), (row * 96), 96, 96))
-        image.set_colorkey((255,255,255))
-
-        return image
-
-class Alien_Sprite_sheet:
-    def __init__(self):
-        self.image = pygame.image.load(path.join(IMG_FOLDER, "beholder_pixel.png")).convert()
+class Read_Sprite_sheet:
+    def __init__(self, image):        
+        self.image = pygame.image.load(path.join(IMG_FOLDER,image)).convert()
         self.size = self.image.get_size()
         self.sheet = pygame.transform.scale(self.image, (int(self.size[0]*4), int(self.size[1]*4)))
 
@@ -61,7 +48,9 @@ class Alien_Sprite_sheet:
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.images = [Player_Sprite_sheet().get_image(0,0), Player_Sprite_sheet().get_image(0,1), Player_Sprite_sheet().get_image(0,2), Player_Sprite_sheet().get_image(1,0), Player_Sprite_sheet().get_image(1,1)]
+        self.images = []
+        for i in range(6):
+            self.images.append(Read_Sprite_sheet("ship_pixel.png").get_image(0,i))
         self.image = self.images[0]
         self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
@@ -84,7 +73,7 @@ class Player(pygame.sprite.Sprite):
         now = pygame.time.get_ticks()
         self.image_index += 1
         
-        if self.image_index > 4:
+        if self.image_index > 3:
             self.image_index = 0
 
         if now - self.last_update > 80:
@@ -130,7 +119,7 @@ class Player(pygame.sprite.Sprite):
 class Playerdamage(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.images = [Player_Sprite_sheet().get_image(1,2), Player_Sprite_sheet().get_image(2,0)]
+        self.images = [Read_Sprite_sheet("ship_pixel.png").get_image(0,4), Read_Sprite_sheet("ship_pixel.png").get_image(0,5)]
         self.image = self.images[0]
         self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
@@ -259,7 +248,7 @@ class Alien(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.images = []
         for i in range(11):
-            self.images.append(Alien_Sprite_sheet().get_image(0,i))
+            self.images.append(Read_Sprite_sheet("beholder_pixel.png").get_image(0,i))
         self.image = self.images[0]
         self.rect = self.image.get_rect()
         self.death = False
@@ -406,7 +395,7 @@ class Splashscreen(object):
     def __init__(self):
         self.running = True
         self.all = pygame.sprite.LayeredUpdates()
-        self.logo = Alien_Sprite_sheet().get_image(0,1)
+        self.logo = Read_Sprite_sheet("Beholder_pixel.png").get_image(0,1)
         self.logo.set_colorkey((255,255,255))
         self.fps = 60
         self.clock = pygame.time.Clock()
@@ -783,7 +772,7 @@ class Gameplay(object):
         def draw_to_screen():
             SCREEN.fill((0,0,0))
             self.all.draw(SCREEN)
-
+            
         def hud_display():
             SCREEN.blit(self.healthbar.image,(25,5))
             for i in range(self.player.health):
