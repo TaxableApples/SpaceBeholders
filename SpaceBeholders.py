@@ -263,7 +263,7 @@ class Alien(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         self.images = []
-        for i in range(12):
+        for i in range(13):
             self.images.append(Read_Sprite_sheet("beholder.png", 100, 112).get_image(0,i))
         self.image = self.images[0]
         self.rect = self.image.get_rect()
@@ -292,7 +292,7 @@ class Alien(pygame.sprite.Sprite):
         if self.death == True:
             self.deathtimer -= 1.5
             if self.deathtimer > 0:
-                r = rd.randint(10,11)
+                r = rd.randint(9,12)
                 self.image = self.images[r]
             if self.deathtimer <= 0:
                 self.kill()
@@ -452,11 +452,12 @@ class Splashscreen(object):
             self.hs_text = GAMEFONT.render("High Score: " + str(HIGHSCORE), 1, (0,0,0), size=22)
             self.center_text = (WIDTH - self.hs_text[1][2]) / 2
         
-            GAMEFONT.render_to(SCREEN, (298,HEIGHT / 2), "SPACE BEHOLDERS", (255,0,0), None, size=64)
-            GAMEFONT.render_to(SCREEN, (self.center_text, 450), "High Score: " + str(HIGHSCORE), (255,0,0), size=22)
-            GAMEFONT.render_to(SCREEN, (496 , 500), "Press Any Key to Play", (255,0,0), None, size=22)
-            GAMEFONT.render_to(SCREEN, (298 , 600), "Use Mouse to aim and shoot, Use keys A,S,D,W to fly", (255,0,0), None, size=22)
-            GAMEFONT.render_to(SCREEN, (444, 650), "Press the Spacebar to pause", (255,0,0), None, size=22)
+            GAMEFONT.render_to(SCREEN, (287,HEIGHT / 2), "SPACE BEHOLDERS", (255,0,0), None, size=64)
+            GAMEFONT.render_to(SCREEN, (self.center_text, 450), "High Score: " + str(HIGHSCORE), (255,255,255), size=22)
+            GAMEFONT.render_to(SCREEN, (513 , 600), "Press Any Key to Play", (255,0,0), None, size=18)
+            GAMEFONT.render_to(SCREEN, (391 , 630), "Use Mouse to aim and shoot, Use keys A,S,D,W to fly", (255,0,0), None, size=16)
+            GAMEFONT.render_to(SCREEN, (495, 658), "Press the Spacebar to pause", (255,0,0), None, size=16)
+            GAMEFONT.render_to(SCREEN, (1150,10), "'Esc' to Quit", (255,255,255), None, size=16)
             self.all.update()
             SCREEN.set_alpha(0)
             self.all.draw(SCREEN)
@@ -480,10 +481,13 @@ class Gameplay(object):
         self.pause = False
         self.start_timer = 5.0
         self.fadein_delay = True
+        self.test_frame_rate = False
         self.fadeout = 50
         self.start = True
         self.die = False
         self.fps = 60
+        self.hp_pool = 0
+        self.god_mode = False
         self.clock = pygame.time.Clock()
         self.all = pygame.sprite.LayeredUpdates()
         self.fx = pygame.sprite.Group()
@@ -520,19 +524,20 @@ class Gameplay(object):
                     self.fadein_delay = False
 
         def create_enemies():
-            if self.start == True and self.fadein_delay == False:
+            if self.start == True and self.fadein_delay == False and DEBUG == False:
                 for _ in range(self.level):
                     enemy = Alien()
                     self.all.add(enemy)
                     self.enemies.add(enemy)
                 self.start = False
-            
-            if DEBUG:
-                if int(self.clock.get_fps()) > 59: 
-                    enemy = Alien()
-                    self.all.add(enemy)
-                    self.enemies.add(enemy)
 
+            if DEBUG:
+                if int(self.clock.get_fps()) > 59:
+                    if self.test_frame_rate == True:
+                        enemy = Alien()
+                        self.all.add(enemy)
+                        self.enemies.add(enemy)
+            
         def create_asteroid():
             if self.fadein_delay == False and self.timer > 5.0 and self.random > 9950:
                 self.asteroid = Asteroid(self.player.rect.centerx)
@@ -580,6 +585,24 @@ class Gameplay(object):
                             for e in pygame.event.get():
                                 if e.type == pygame.KEYDOWN:
                                     self.pause = False
+
+                if DEBUG:
+                    if e.type == pygame.KEYDOWN:
+                        if e.key == pygame.K_y:
+                            if self.god_mode == False: self.god_mode = True
+                            else: self.god_mode = False
+
+                        if e.key == pygame.K_o: self.test_frame_rate = True
+
+                        if e.key == pygame.K_u:
+                            enemy = Alien()
+                            self.all.add(enemy)
+                            self.enemies.add(enemy)
+
+                        if e.key == pygame.K_i:
+                            self.healthpack = Healthpack()
+                            self.powerup.add(self.healthpack)
+                            self.all.add(self.healthpack)
 
         def player_shoot():
             self.bullet_timer -= 0.025
@@ -689,9 +712,16 @@ class Gameplay(object):
         
         def player_health_pickup():
             player_health_pickup = pygame.sprite.spritecollide(self.player, self.powerup, True, pygame.sprite.collide_circle)
-            if player_health_pickup:
-                self.player.health = 196
-        
+            if player_health_pickup and self.die == False:
+                self.hp_pool = 196
+                
+            if self.hp_pool > 0 and self.player.health < 196:
+                self.hp_pool -= 1
+                self.player.health += 1
+
+            if self.player.health >= 196:
+                self.hp_pool = 0
+
         def player_asteroid_collide():
             player_asteroid_collide = pygame.sprite.spritecollide(self.player, self.asteroids, False, pygame.sprite.collide_circle)
             if player_asteroid_collide:
@@ -706,7 +736,7 @@ class Gameplay(object):
         def player_enemy_collide():
             player_enemy_collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
             if player_enemy_collide:
-                if DEBUG == False:
+                if self.god_mode == False:
                     self.player.health -= rd.randint(5,10)
             
             for sprite in player_enemy_collide:
@@ -731,11 +761,15 @@ class Gameplay(object):
                 GAMEFONT.render_to(SCREEN, (470,300), "Next Wave In " + str(int(self.timer)), (255,255,255), None, size=27)
 
             if DEBUG:
-                GAMEFONT.render_to(SCREEN, (10,550), "DEBUG MODE ON", (255,0,0), None, size=18)
-                GAMEFONT.render_to(SCREEN, (10,600), str(self.clock), (255,0,0), None, size=18)
-                GAMEFONT.render_to(SCREEN, (10,625), "Enemies: " + str(len(self.enemies)), (255,0,0), None, size=18)
-                GAMEFONT.render_to(SCREEN, (10,650), "Round: " + str(self.timer), (255,0,0), None, size=18) 
-                GAMEFONT.render_to(SCREEN, (10,675), "Accuracy: " + str(round(self.acccalc, 2)) + "%", (255,0,0), None, size=18)
+                GAMEFONT.render_to(SCREEN, (10,550), "DEBUG MODE ON", (255,0,0), None, size=12)
+                GAMEFONT.render_to(SCREEN, (10,600), str(self.clock), (255,0,0), None, size=12)
+                GAMEFONT.render_to(SCREEN, (10,625), "Enemies: " + str(len(self.enemies)), (255,0,0), None, size=12)
+                GAMEFONT.render_to(SCREEN, (10,650), "Round: " + str(self.timer), (255,0,0), None, size=12) 
+                GAMEFONT.render_to(SCREEN, (10,675), "Accuracy: " + str(round(self.acccalc, 2)) + "%", (255,0,0), None, size=12)
+                GAMEFONT.render_to(SCREEN, (200,675), "Spawn Enemy: u", (255,0,0), None, size=12)
+                GAMEFONT.render_to(SCREEN, (400,675), "Spawn Health: p", (255,0,0), None, size=12)
+                GAMEFONT.render_to(SCREEN, (600,675), "Test Framerate: o", (255,0,0), None, size=12)
+                GAMEFONT.render_to(SCREEN, (800,675), "Toggle God Mode: y (" + str(self.god_mode) + ")", (255,0,0), None, size=12)
 
         while self.running:       
             timed_events()
@@ -759,7 +793,10 @@ class Gameplay(object):
             pygame.display.flip()                
 
         global SCORE
-        SCORE = self.score_display
+        if DEBUG == False:
+            SCORE = self.score_display
+        else:
+            SCORE = 0    
         return SCORE
 
 class End_Game_Screen(object):
@@ -769,7 +806,6 @@ class End_Game_Screen(object):
         self.save_score()
 
     def save_score(self):
-        print(SCORE, HIGHSCORE)
         if SCORE > HIGHSCORE:
             self.highscore = SCORE
             #GAMEFONT.render_to(SCREEN, (495,300), "NEW HIGH SCORE!", (0,255,0), None, size=30)
@@ -799,14 +835,17 @@ class End_Game_Screen(object):
 
         def draw_to_screen():
             SCREEN.fill((0,0,0))
+            self.hs_text = GAMEFONT.render("Score: " + str(SCORE), 1, (0,0,0), size=20)
+            self.center_text = (WIDTH - self.hs_text[1][2]) / 2
+
             if SCORE > HIGHSCORE:
-                GAMEFONT.render_to(SCREEN, (419,250), "NEW HIGH SCORE!", (0,255,0), None, size=40)    
-            GAMEFONT.render_to(SCREEN, (495,300), "GAME OVER", (255,0,0), None, size=40)
-            GAMEFONT.render_to(SCREEN, (540,370), "Score: " + str(SCORE) + "!", (255,0,0), None, size=20)
+                GAMEFONT.render_to(SCREEN, (434,250), "NEW HIGH SCORE!", (0,255,0), None, size=40)    
+            GAMEFONT.render_to(SCREEN, (510,300), "GAME OVER", (255,0,0), None, size=40)
+            GAMEFONT.render_to(SCREEN, (self.center_text,370), "Score: " + str(SCORE), (255,0,0), None, size=20)
 
             if self.timer <= 0:
-                GAMEFONT.render_to(SCREEN, (505,410), "Press 'esc' to quit", (255,0,0), None, size=20)
-                GAMEFONT.render_to(SCREEN, (455,450), "Press 'any key' to continue", (255,0,0), None, size=20)
+                GAMEFONT.render_to(SCREEN, (521,410), "Press 'esc' to quit", (255,0,0), None, size=20)
+                GAMEFONT.render_to(SCREEN, (463,450), "Press 'any key' to continue", (255,0,0), None, size=20)
 
         while self.running:
             timed_events()
