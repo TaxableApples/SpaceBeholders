@@ -10,12 +10,9 @@ from os import path
 pygame.init()
 pygame.freetype.init()
 
-DEBUG = False
-SAFE_MODE = False
-FR_TEST_MODE = False
-
 WIDTH, HEIGHT = 1280, 720
 SOUND = True
+DEBUG = False
 SCORE = 0
 HIGHSCORE = 0
 GAME_FOLDER = path.dirname(__file__)
@@ -32,7 +29,7 @@ except:
     SOUND = False
     print("Failed to load audio device!")
 
-class Read_Sprite_sheet:
+class Read_Sprite_sheet():
     def __init__(self, image):        
         self.image = pygame.image.load(path.join(IMG_FOLDER,image)).convert()
         self.size = self.image.get_size()
@@ -49,7 +46,7 @@ class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         self.images = []
-        for i in range(6):
+        for i in range(11):
             self.images.append(Read_Sprite_sheet("ship_pixel.png").get_image(0,i))
         self.image = self.images[0]
         self.image.set_colorkey((255,255,255))
@@ -68,13 +65,24 @@ class Player(pygame.sprite.Sprite):
         self.light = pygame.transform.scale(self.light_sm, (self.light_size[0]*2, self.light_size[1]*2))
         self.light_rect = self.light.get_rect()
         self.light.set_colorkey((255,255,255))
+        self.left_turn = False
+        self.right_turn = False
 
     def update_image(self):
         now = pygame.time.get_ticks()
         self.image_index += 1
+
+        if self.left_turn == False and self.right_turn == False:
+            if self.image_index > 3:
+                self.image_index = 0
         
-        if self.image_index > 3:
-            self.image_index = 0
+        if self.left_turn == True:
+            if self.image_index >= 8:
+                self.image_index = 6
+
+        if self.right_turn == True:
+            if self.image_index >= 6:
+                self.image_index = 4
 
         if now - self.last_update > 80:
             self.image = self.images[self.image_index]
@@ -94,8 +102,14 @@ class Player(pygame.sprite.Sprite):
         keystate = pygame.key.get_pressed()
         if keystate[pygame.K_a]:
             self.speedx = -5
+            self.left_turn = True
+        else:
+            self.left_turn = False
         if keystate[pygame.K_d]:
             self.speedx = 5
+            self.right_turn = True
+        else:
+            self.right_turn = False
         if keystate[pygame.K_w]:
             self.speedy = -5
         if keystate[pygame.K_s]:
@@ -119,7 +133,7 @@ class Player(pygame.sprite.Sprite):
 class Playerdamage(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.images = [Read_Sprite_sheet("ship_pixel.png").get_image(0,4), Read_Sprite_sheet("ship_pixel.png").get_image(0,5)]
+        self.images = [Read_Sprite_sheet("ship_pixel.png").get_image(0,8), Read_Sprite_sheet("ship_pixel.png").get_image(0,9)]
         self.image = self.images[0]
         self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
@@ -323,26 +337,6 @@ class Asteroid(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT + 10:
             self.kill()
 
-class SpaceDebris(pygame.sprite.Sprite):
-    def __init__(self):
-        pygame.sprite.Sprite.__init__(self)
-        self.pseed = rd.randint(1, 4)
-        self.cseed = rd.randint(2, 255)
-        self.x = self.pseed
-        self.y = self.pseed
-        self.speed = rd.randrange(8, 12)
-        self.image = pygame.Surface((self.x, self.y))
-        self.image.fill((self.cseed, self.cseed, self.cseed))
-        self.rect = self.image.get_rect()
-        self.rect.y = -100
-        self.rect.x = rd.randint(0, WIDTH)
-        self._layer = 0
-
-    def update(self):
-        self.rect.y += self.speed
-        if self.rect.top > HEIGHT + 10:
-            self.kill()
-
 class Cursor(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
@@ -462,64 +456,11 @@ class Splashscreen(object):
             SCREEN.set_alpha(0)
             self.all.draw(SCREEN)
 
-        while self.running:  
-                   
+        while self.running:                  
             player_controls()
             timed_events()
             draw_to_screen()
             pygame.display.flip()
-
-class End_Game_Screen(object):
-    def __init__(self):
-        self.running = True
-        self.timer = 1200
-        self.save_score()
-
-    def save_score(self):
-        print(SCORE, HIGHSCORE)
-        if SCORE > HIGHSCORE:
-            self.highscore = SCORE
-            #GAMEFONT.render_to(SCREEN, (495,300), "NEW HIGH SCORE!", (0,255,0), None, size=30)
-            print(self.highscore)
-            try:
-                with open(path.join(GAME_FOLDER, "gamedata.txt"), "w") as f:
-                    f.write(str(self.highscore))
-            except:
-                print ("I/O Error: Score not saved!")
-
-    def run(self):
-        def timed_events():
-            if self.timer > 0:
-                self.timer -= 1
-
-        def get_user_input():
-            if self.timer <= 0:
-                for e in pygame.event.get():
-                        if e.type == pygame.KEYDOWN:
-                            self.running = False
-                            pygame.time.set_timer(pygame.KEYDOWN, 0)
-
-                        if e.type == pygame.KEYDOWN:
-                            if e.key == K_ESCAPE:
-                                self.running = False
-                                Main().run(False)
-
-        def draw_to_screen():
-            SCREEN.fill((0,0,0))
-            if SCORE > HIGHSCORE:
-                GAMEFONT.render_to(SCREEN, (419,250), "NEW HIGH SCORE!", (0,255,0), None, size=40)    
-            GAMEFONT.render_to(SCREEN, (495,300), "GAME OVER", (255,0,0), None, size=40)
-            GAMEFONT.render_to(SCREEN, (540,370), "Score: " + str(SCORE) + "!", (255,0,0), None, size=20)
-
-            if self.timer <= 0:
-                GAMEFONT.render_to(SCREEN, (505,410), "Press 'esc' to quit", (255,0,0), None, size=20)
-                GAMEFONT.render_to(SCREEN, (455,450), "Press 'any key' to continue", (255,0,0), None, size=20)
-
-        while self.running:
-            timed_events()
-            get_user_input()
-            draw_to_screen()
-            pygame.display.flip()  
 
 class Gameplay(object):
     def __init__(self):
@@ -568,7 +509,7 @@ class Gameplay(object):
                 self.timer = 20.01
            
             if len(self.fade.sprites()) == 0:
-                if SAFE_MODE:
+                if DEBUG:
                     self.fadein_delay = True
                 else:
                     self.fadein_delay = False
@@ -581,7 +522,7 @@ class Gameplay(object):
                     self.enemies.add(enemy)
                 self.start = False
             
-            if FR_TEST_MODE:
+            if DEBUG:
                 if int(self.clock.get_fps()) > 59: 
                     enemy = Alien()
                     self.all.add(enemy)
@@ -609,7 +550,7 @@ class Gameplay(object):
          
             if int(self.clock.get_fps()) > 59:
                 r = rd.randint(5,255)
-                self.stars = Particles(rd.randint(0,WIDTH),0,0,rd.randint(5,10),(r,r,r),1000)
+                self.stars = Particles(rd.randint(0,WIDTH),0,0,rd.randint(5,10),(r,r,r),500)
                 self.all.add(self.stars)
 
         def player_controls():
@@ -760,7 +701,7 @@ class Gameplay(object):
         def player_enemy_collide():
             player_enemy_collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
             if player_enemy_collide:
-                if FR_TEST_MODE == False:
+                if DEBUG == False:
                     self.player.health -= rd.randint(5,10)
             
             for sprite in player_enemy_collide:
@@ -815,6 +756,58 @@ class Gameplay(object):
         global SCORE
         SCORE = self.score_display
         return SCORE
+
+class End_Game_Screen(object):
+    def __init__(self):
+        self.running = True
+        self.timer = 1200
+        self.save_score()
+
+    def save_score(self):
+        print(SCORE, HIGHSCORE)
+        if SCORE > HIGHSCORE:
+            self.highscore = SCORE
+            #GAMEFONT.render_to(SCREEN, (495,300), "NEW HIGH SCORE!", (0,255,0), None, size=30)
+            print(self.highscore)
+            try:
+                with open(path.join(GAME_FOLDER, "gamedata.txt"), "w") as f:
+                    f.write(str(self.highscore))
+            except:
+                print ("I/O Error: Score not saved!")
+
+    def run(self):
+        def timed_events():
+            if self.timer > 0:
+                self.timer -= 1
+
+        def get_user_input():
+            if self.timer <= 0:
+                for e in pygame.event.get():
+                        if e.type == pygame.KEYDOWN:
+                            self.running = False
+                            pygame.time.set_timer(pygame.KEYDOWN, 0)
+
+                        if e.type == pygame.KEYDOWN:
+                            if e.key == K_ESCAPE:
+                                self.running = False
+                                Main().run(False)
+
+        def draw_to_screen():
+            SCREEN.fill((0,0,0))
+            if SCORE > HIGHSCORE:
+                GAMEFONT.render_to(SCREEN, (419,250), "NEW HIGH SCORE!", (0,255,0), None, size=40)    
+            GAMEFONT.render_to(SCREEN, (495,300), "GAME OVER", (255,0,0), None, size=40)
+            GAMEFONT.render_to(SCREEN, (540,370), "Score: " + str(SCORE) + "!", (255,0,0), None, size=20)
+
+            if self.timer <= 0:
+                GAMEFONT.render_to(SCREEN, (505,410), "Press 'esc' to quit", (255,0,0), None, size=20)
+                GAMEFONT.render_to(SCREEN, (455,450), "Press 'any key' to continue", (255,0,0), None, size=20)
+
+        while self.running:
+            timed_events()
+            get_user_input()
+            draw_to_screen()
+            pygame.display.flip()  
 
 class Main(object):
     def __init__(self):
