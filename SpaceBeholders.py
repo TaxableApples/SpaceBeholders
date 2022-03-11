@@ -33,7 +33,7 @@ class Read_Sprite_sheet():
     def __init__(self, image, height, width):        
         self.image = pygame.image.load(path.join(IMG_FOLDER,image)).convert()
         self.size = self.image.get_size()
-        self.sheet = pygame.transform.scale(self.image, (int(self.size[0]*4), int(self.size[1]*4)))
+        self.sheet = pygame.transform.scale(self.image, (int(self.size[0]*3), int(self.size[1]*3)))
         self.height = height
         self.width = width
 
@@ -49,7 +49,7 @@ class Player(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.images = []
         for i in range(11):
-            self.images.append(Read_Sprite_sheet("ship_pixel.png", 96, 64).get_image(0,i))
+            self.images.append(Read_Sprite_sheet("ship_pixel.png", 72, 48).get_image(0,i))
         self.image = self.images[0]
         self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
@@ -135,7 +135,7 @@ class Player(pygame.sprite.Sprite):
 class Playerdamage(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.images = [Read_Sprite_sheet("ship_pixel.png", 96, 64).get_image(0,8), Read_Sprite_sheet("ship_pixel.png", 96, 64).get_image(0,9)]
+        self.images = [Read_Sprite_sheet("ship_pixel.png", 72, 48).get_image(0,8), Read_Sprite_sheet("ship_pixel.png", 72, 48).get_image(0,9)]
         self.image = self.images[0]
         self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
@@ -158,7 +158,9 @@ class Playerdamage(pygame.sprite.Sprite):
 class Particles(pygame.sprite.Sprite):
     def __init__(self, x, y, xspeed, yspeed, color, lifespan):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((rd.randint(1,6),(rd.randint(1,6))))
+        self.r=rd.randint(1,6)
+        self.image = pygame.Surface((self.r,self.r))
+
         self.random = rd.randint(0,1)
         self.image.fill(color)
         self.image.set_colorkey((0,0,0)) 
@@ -176,6 +178,7 @@ class Particles(pygame.sprite.Sprite):
 
         self.rect.y += self.yspeed
         self.rect.x += self.xspeed
+        
         if self.rect.y > HEIGHT or self.timer > self.lifespan:
             self.kill()
 
@@ -195,6 +198,7 @@ class Show_Hit_Score(pygame.sprite.Sprite):
         self.timeout -= 1
         self.rect.x += self.speedx
         self.rect.y += self.speedy
+        
         GAMEFONT.render_to(SCREEN, (self.rect.x, self.rect.y), str(self.score),(0,255,0), size=18)
 
         if self.timeout <= 0 or self.rect.x > WIDTH or self.rect.x < 0:
@@ -204,6 +208,7 @@ class Player_Shoot(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface((6,6))
+        self.glow_seed = pygame.Surface((26,26))
         self.image.fill((0,255,0))
         self.rect = self.image.get_rect()
         self.rect.centery = y
@@ -215,7 +220,8 @@ class Player_Shoot(pygame.sprite.Sprite):
         self.vely = mouse_y - self.rect.centery
         self.velocity = np.array([self.velx, self.vely])
         self.velocity = 10 * self.velocity / np.linalg.norm(self.velocity)
-        self._layer = 1
+        self._layer = 0
+        self.glow = pygame.draw.circle(self.glow_seed, (0,40,0), (13, 13), 12)
 
     def kill_bullet(self):
         if self.rect.bottom < 0:
@@ -228,10 +234,12 @@ class Player_Shoot(pygame.sprite.Sprite):
             self.kill()
 
     def update(self):
+        SCREEN.blit(self.glow_seed, (self.rect.x-11, self.rect.y-11), special_flags=BLEND_RGB_ADD)
         self.x += self.velocity[0]
         self.y += self.velocity[1]  
         self.rect.x = int(self.x)
         self.rect.y = int(self.y)  
+        
         self.kill_bullet()
 
 class Healthpack(pygame.sprite.Sprite):
@@ -264,7 +272,7 @@ class Alien(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.images = []
         for i in range(13):
-            self.images.append(Read_Sprite_sheet("beholder.png", 100, 112).get_image(0,i))
+            self.images.append(Read_Sprite_sheet("beholder.png", 75, 84).get_image(0,i))
         self.image = self.images[0]
         self.rect = self.image.get_rect()
         self.death = False
@@ -283,7 +291,7 @@ class Alien(pygame.sprite.Sprite):
         now = pygame.time.get_ticks()
         if self.death == False:
             if now - self.last_update > 80:
-                if self.frame >= 10:
+                if self.frame >= 9:
                     self.frame = 0
                 self.image = self.images[self.frame]
                 self.frame +=1
@@ -313,7 +321,50 @@ class Alien(pygame.sprite.Sprite):
     def update(self):
         self.update_image()
         self.move()
-            
+
+class EnemyShip(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.images=[]
+        for i in range(4):
+            self.images.append(Read_Sprite_sheet("enemy_ship.png", 84, 84).get_image(0,i))
+        self.image = self.images[0]
+        self.glow_seed = pygame.Surface((50,50))
+        self.glow = pygame.draw.circle(self.glow_seed, (30,0,0), (25, 25), 25)
+        self.frame = 0
+        self.rect = self.image.get_rect()
+        self.rect.x = rd.randrange(0, WIDTH - self.rect.width)
+        self.rect.y = rd.randrange(-340, -140)
+        self.speedy = 1
+        self.speedx = rd.randrange(-3, 3)
+        self.last_update = pygame.time.get_ticks()
+        self.death = False
+        
+    def update_image(self):
+        now = pygame.time.get_ticks()
+        if self.death == False:
+            if now - self.last_update > 80:
+                if self.frame >= 4:
+                    self.frame = 0
+                self.image = self.images[self.frame]
+                self.frame +=1
+                self.last_update = now
+
+    def move(self):
+        SCREEN.blit(self.glow_seed, (self.rect.x+16, self.rect.y+16), special_flags=BLEND_RGB_ADD)
+        self.rect.y += self.speedy
+        self.rect.x += self.speedx
+
+        if self.rect.left < 0 or self.rect.right > WIDTH:
+            self.speedx = -self.speedx
+
+        if self.rect.top > HEIGHT + 10:
+            self.kill()
+
+    def update(self):
+        self.update_image()
+        self.move()
+
 class Asteroid(pygame.sprite.Sprite):
     def __init__(self, x):
         pygame.sprite.Sprite.__init__(self)
@@ -321,7 +372,7 @@ class Asteroid(pygame.sprite.Sprite):
         self.randomize = rd.randint(0,3)
         self.image = pygame.image.load(path.join(IMG_FOLDER, self.images[self.randomize])).convert()
         self.size = self.image.get_size()
-        self.upsize = pygame.transform.scale(self.image, (int(self.size[0]*4), int(self.size[1]*4)))
+        self.upsize = pygame.transform.scale(self.image, (int(self.size[0]*3), int(self.size[1]*3)))
         self.image = self.upsize
         self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
@@ -394,7 +445,7 @@ class Splashscreen(object):
     def __init__(self):
         self.running = True
         self.all = pygame.sprite.LayeredUpdates()
-        self.logo = Read_Sprite_sheet("Beholder.png", 100, 112).get_image(0,1)
+        self.logo = Read_Sprite_sheet("Beholder.png", 75, 84).get_image(0,1)
         self.logo.set_colorkey((255,255,255))
         self.fps = 60
         self.clock = pygame.time.Clock()
@@ -492,6 +543,7 @@ class Gameplay(object):
         self.all = pygame.sprite.LayeredUpdates()
         self.fx = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
+        self.enemyships = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
         self.asteroids = pygame.sprite.Group()
         self.powerup = pygame.sprite.Group()
@@ -530,6 +582,13 @@ class Gameplay(object):
                     self.all.add(enemy)
                     self.enemies.add(enemy)
                 self.start = False
+
+            self.random = rd.randint(1,10000)
+
+            if self.random >= 9990:
+                enemy = EnemyShip()
+                self.all.add(enemy)
+                self.enemyships.add(enemy)
 
             if DEBUG:
                 if int(self.clock.get_fps()) > 59:
@@ -668,6 +727,13 @@ class Gameplay(object):
                     bullety = sprite.rect.y
                     bulletvely = sprite.velocity[1]
                     enemy_gets_shot(bulletx, bullety, bulletvely)
+
+                enemy_ship_hit_by_bullet = pygame.sprite.groupcollide(self.bullets, self.enemyships, False, False)
+                for sprite in enemy_ship_hit_by_bullet:
+                    bulletx = sprite.rect.x
+                    bullety = sprite.rect.y
+                    bulletvely = sprite.velocity[1]
+                    enemy_ship_gets_shot(bulletx, bullety, bulletvely)
         
         def enemy_gets_shot(bulletx, bullety, bulletvely):
             player_shoot_enemy = pygame.sprite.groupcollide(self.enemies, self.bullets, False, True)
@@ -699,6 +765,25 @@ class Gameplay(object):
                 
                 sprite.death = True
         
+        def enemy_ship_gets_shot(bulletx, bullety, bulletvely):
+            player_shoot_enemy_ship = pygame.sprite.groupcollide(self.enemyships, self.bullets, False, False)
+            for sprite in player_shoot_enemy_ship:
+                r = rd.randint(3,6)
+                for _ in range(r):
+                    laser = Particles(bulletx, bullety, rd.randint(-5,5), rd.randint(-2,2) + bulletvely + sprite.speedy, (0,rd.randint(100,255),0), rd.randint(25,100))
+                    redstuff = Particles(bulletx, bullety, rd.randint(-5,5), rd.randint(-1,1) + sprite.speedy, (rd.randint(100,255),0,0), rd.randint(25,100))
+                    shipparts = Particles(bulletx, bullety, rd.randint(-5,5), rd.randint(-1,1) + sprite.speedy, (20,20,20), rd.randint(25,100))
+                    self.all.add(laser, redstuff, shipparts)
+
+                if sprite.death == False:
+                    self.score += 5000
+                
+                    if sprite.rect.y > 0:
+                        show_hit = Show_Hit_Score(sprite.speedx, sprite.speedy, sprite.rect.x+15, sprite.rect.y+15, (self.score-9))
+                        self.all.add(show_hit)
+
+                sprite.death = True
+
         def player_shoot_asteroid():
             player_shoot_asteroid = pygame.sprite.groupcollide(self.bullets, self.asteroids, True, False)
             for sprite in player_shoot_asteroid:
@@ -742,7 +827,16 @@ class Gameplay(object):
             for sprite in player_enemy_collide:
                 if dict[sprite]:
                     d = Playerdamage(self.player.rect.x, self.player.rect.y)
+                    self.all.add(d)
 
+            player_enemy_ship_collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
+            if player_enemy_ship_collide:
+                if self.god_mode == False:
+                    self.player.health -= rd.randint(5,10)
+
+            for sprite in player_enemy_ship_collide:        
+                if dict[sprite]:
+                    d = Playerdamage(self.player.rect.x, self.player.rect.y)
                     self.all.add(d)
         
         def draw_to_screen():
