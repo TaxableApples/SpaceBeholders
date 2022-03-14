@@ -59,6 +59,8 @@ class Player(pygame.sprite.Sprite):
         self.last_update = pygame.time.get_ticks()
         self._layer = 0
         self.image_index = 0
+        self.hit = False
+        self.shooting = False
 
         self.light_sm = pygame.image.load(path.join(IMG_FOLDER, "light.png")).convert()
         self.light_size = self.light_sm.get_size()
@@ -183,7 +185,7 @@ class Particles(pygame.sprite.Sprite):
 class Show_Hit_Score(pygame.sprite.Sprite):
     def __init__(self, speedx, speedy, x, y, score):
         pygame.sprite.Sprite.__init__(self)
-        self.score = str(int(score))
+        self.score = str(int(score-9))
         self.timeout = 60
         self.image = pygame.Surface((1,1))
         self.rect = self.image.get_rect()
@@ -264,63 +266,8 @@ class Healthbar(pygame.sprite.Sprite):
         self.rect.left, self.rect.top = loc
         self._layer = 2
 
-class Alien(pygame.sprite.Sprite):
-    def __init__(self):
-        pygame.sprite.Sprite.__init__(self)
-        self.images = []
-        for i in range(13):
-            self.images.append(Read_Sprite_sheet("beholder.png", 75, 84).get_image(0,i))
-        self.image = self.images[0]
-        self.rect = self.image.get_rect()
-        self.hit = False
-        self.deathtimer = 14
-        self.radius = 44
-        self.rect.x = rd.randrange(0, WIDTH - self.rect.width)
-        self.rect.y = rd.randrange(-340, -140)
-        self.speedy = rd.randrange(1, 8)
-        self.speedx = rd.randrange(-3, 3)
-        self.penalty = 0
-        self.last_update = pygame.time.get_ticks()
-        self._layer = 0
-        self.frame = rd.randint(0,9)
-        
-    def update_image(self):
-        now = pygame.time.get_ticks()
-        if self.hit == False:
-            if now - self.last_update > 80:
-                if self.frame >= 9:
-                    self.frame = 0
-                self.image = self.images[self.frame]
-                self.frame +=1
-                self.last_update = now
-
-        if self.hit == True:
-            self.deathtimer -= 1.5
-            if self.deathtimer > 0:
-                r = rd.randint(9,12)
-                self.image = self.images[r]
-            if self.deathtimer <= 0:
-                self.kill()
-    
-    def move(self):
-        self.rect.y += self.speedy
-        self.rect.x += self.speedx
-
-        if self.rect.left < 0 or self.rect.right > WIDTH:
-            self.speedx = -self.speedx
-
-        if self.rect.top > HEIGHT + 10:
-            self.rect.x = rd.randrange(0, WIDTH - self.rect.width)
-            self.rect.y = rd.randrange(-600, -300)
-            self.speedy = rd.randrange(1, 8)
-            self.penalty += (self.speedy*1100)
-
-    def update(self):
-        self.update_image()
-        self.move()
-
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, image, image_range, height, width, speedx ,speedy, hitpoints):
+    def __init__(self, image, image_range, height, width, speedx ,speedy, hitpoints, bonus):
         pygame.sprite.Sprite.__init__(self)
         self.images=[]
         for i in range(image_range):
@@ -335,37 +282,37 @@ class Enemy(pygame.sprite.Sprite):
         self.last_update = pygame.time.get_ticks()
         self.hit = False
         self.death = False
+
+        self.shooting = False
         self.hp = hitpoints;
         self.hit_timer = 15
         self.penalty = 0
+        self.score = 0
+        self.bonus = bonus
         self.image_range = image_range
+        self.mod = 0
         
     def take_damage(self):
         self.hp -= 1
+
         if self.hp <= 0:
+            if self.speedx == 0 or self.speedy == 0:
+                self.mod = 1
+            self.score += abs(1553 * (self.speedx + self.mod) * (self.speedy + self.mod) + self.bonus)
+            
+        if self.death == True:
             self.kill()
 
     def update_image(self):
         now = pygame.time.get_ticks()
 
-        if self.hit == False:
-            if now - self.last_update > 80:
-                if self.frame >= self.image_range - 3:
-                    self.frame = 0
-                self.frame +=1
-                self.last_update = now
+        if now - self.last_update > 80:
+            if self.frame >= self.image_range - 3:
+                self.frame = 0
+            self.frame +=1
+            self.last_update = now
 
         if self.hit == True:
-            self.hit_timer -= 1.5
-            if self.frame <= self.image_range-3:
-                self.frame = self.image_range-2
-            else:
-                self.frame += 1
-            if self.frame > self.image_range:
-                self.frame = self.image_range - 2
-            if self.hit_timer >= 0:
-                self.hit = False
-                self.hit_timer = 14
             self.take_damage()
 
         self.image = self.images[self.frame]
@@ -378,6 +325,12 @@ class Enemy(pygame.sprite.Sprite):
             self.speedx = -self.speedx
 
         if self.rect.top > HEIGHT + 10:
+            self.rect.x = rd.randrange(0, WIDTH - self.rect.width)
+            self.rect.y = rd.randrange(-600, -300)
+            self.speedy = rd.randrange(1, 8)
+            self.penalty += (self.speedy*1100)
+
+        if self.rect.top > HEIGHT + 10 and self.penalty <=0:
             self.kill()
 
     def update(self):
@@ -402,6 +355,8 @@ class Asteroid(pygame.sprite.Sprite):
         self.last_update = pygame.time.get_ticks()
         self.random = rd.randint(1, 20)
         self._layer = 3
+        self.hit = False
+
         if self.random > 18:
             self.rect.x = x
         else:
@@ -542,6 +497,7 @@ class Gameplay(object):
     def __init__(self):
         self.running = True
         self.score = 0
+        self.scorebank = 0
         self.random = 0
         self.score_display = 0
         self.level = 1
@@ -558,16 +514,19 @@ class Gameplay(object):
         self.fps = 60
         self.hp_pool = 0
         self.god_mode = False
+        self.mouse_x, self.mouse_y = pygame.mouse.get_pos()
         self.clock = pygame.time.Clock()
         self.all = pygame.sprite.LayeredUpdates()
         self.fx = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.enemyships = pygame.sprite.Group()
+        self.all_enemies = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
         self.asteroids = pygame.sprite.Group()
         self.powerup = pygame.sprite.Group()
         self.fade = pygame.sprite.Group()
         self.enemybullet = pygame.sprite.Group()
+        self.players = pygame.sprite.Group()
         self.player = Player()
         self.cursor = Cursor()
         self.healthbar = Healthbar([5,5])
@@ -576,7 +535,7 @@ class Gameplay(object):
         self.fadein = Scene_Fade_In(300)      
         self.fade.add(self.fadein)
         self.all.add(self.player, self.cursor, self.fadein)
-        self.all.add()
+        self.players.add(self.player)
 
     def run(self):
 
@@ -595,29 +554,28 @@ class Gameplay(object):
                 else:
                     self.fadein_delay = False
 
-        def spawn():
+        def spawn(thing, spawn_limit, sprite_group, isenemy):
             if self.start == True and self.fadein_delay == False and DEBUG == False:
-                def random_spawn(thing, spawn_limit, sprite_group):
-                    self.random = rd.randint(1,10000)
-                    if int(self.clock.get_fps()) > 59 and self.random >= spawn_limit:
-                        self.all.add(thing)
-                        sprite_group.add(thing)
 
-                random_spawn(Enemy("beholder.png", 13, 75, 84, rd.randint(-3,3), rd.randint(1,8), 1), (10000-self.level*100), self.enemies)
-                random_spawn(Enemy("enemy_ship.png", 6, 84, 84, rd.randint(-3,3), 1, 5), 9990, self.enemyships)
-                random_spawn(Asteroid(self.player.rect.centerx), 9950, self.asteroids)
-                random_spawn(Healthpack(),(10000-self.level*5), self.powerup)
-                random_spawn(Particles((self.player.rect.centerx+rd.randint(-25,+25)), (self.player.rect.centery+25), 0, rd.randint(5,10), (255, 165, 0), rd.randint(25,100)), 5000, self.fx)
-                random_spawn(Particles(rd.randint(0,WIDTH),0,0,rd.randint(5,10),(rd.randint(5,255),rd.randint(5,255),rd.randint(5,255)),500), 1, self.fx)
-            
+                self.random = rd.randint(1,10000)
+                if int(self.clock.get_fps()) > 59 and self.random >= spawn_limit:
+                    self.all.add(thing)
+                    sprite_group.add(thing)
+
+                    if isenemy == True:
+                        self.all_enemies.add(thing)
+
             if DEBUG:
                 if int(self.clock.get_fps()) > 59:
                     if self.test_frame_rate == True:
-                        enemy = Enemy("beholder.png", 13, 75, 84, rd.randint(-3,3), rd.randint(1,8), 1)
+                        enemy = Enemy("beholder.png", 13, 75, 84, rd.randint(-3,3), rd.randint(1,8), 1, 0)
                         self.all.add(enemy)
+                        self.all_enemies.add(enemy)
                         self.enemies.add(enemy)
 
         def player_controls():
+            self.mouse_x, self.mouse_y = pygame.mouse.get_pos()
+
             for e in pygame.event.get():
                 if e.type == pygame.KEYDOWN:
                     if e.key == K_ESCAPE:
@@ -625,10 +583,10 @@ class Gameplay(object):
 
                 if e.type == pygame.MOUSEBUTTONDOWN:
                     self.bullet_timer = 0
-                    self.shooting = True
+                    self.player.shooting = True
                 
                 if e.type == pygame.MOUSEBUTTONUP:
-                    self.shooting = False
+                    self.player.shooting = False
 
                 if e.type == pygame.KEYDOWN:
                     if e.key == K_SPACE:
@@ -639,7 +597,7 @@ class Gameplay(object):
                             for e in pygame.event.get():
                                 if e.type == pygame.KEYDOWN:
                                     self.pause = False
-
+                
                 if DEBUG:
                     if e.type == pygame.KEYDOWN:
                         if e.key == pygame.K_y:
@@ -649,8 +607,9 @@ class Gameplay(object):
                         if e.key == pygame.K_o: self.test_frame_rate = True
 
                         if e.key == pygame.K_u:
-                            enemy = Alien()
+                            enemy = Enemy("beholder.png", 13, 75, 84, rd.randint(-3,3), rd.randint(1,8), 1, 0)
                             self.all.add(enemy)
+                            self.all_enemies.add(enemy)
                             self.enemies.add(enemy)
 
                         if e.key == pygame.K_i:
@@ -658,17 +617,17 @@ class Gameplay(object):
                             self.powerup.add(self.healthpack)
                             self.all.add(self.healthpack)
 
-        def player_shoot():
+        def shooting(sprite, target_x, target_y, color, glow, group):
             self.bullet_timer -= 0.025
             self.timer = round(self.timer - .01, 2)
-            
-            if self.shooting:
+        
+            if sprite.shooting:
                 if self.bullet_timer <= 0:
                     self.bullet_timer = 0.5
-                    mouse_x, mouse_y = pygame.mouse.get_pos()
-                    self.bullet = Shoot(self.player.rect.centerx, self.player.rect.centery, mouse_x, mouse_y, (0,255,0), (0,40,0))
+                    
+                    self.bullet = Shoot(sprite.rect.centerx, sprite.rect.centery, target_x, target_y, color, glow)
                     self.all.add(self.bullet)
-                    self.bullets.add(self.bullet)
+                    group.add(self.bullet)
                     if SOUND: 
                         pygame.mixer.Channel(0).play(pygame.mixer.Sound(path.join(SOUND_FOLDER, "shoot.ogg")))
                     self.accuracy[1] += 1
@@ -698,20 +657,8 @@ class Gameplay(object):
                         self.level += 1
 
                     levelup = False                
-
-        def calculate_score():
-            for sprite in self.enemies:
-                if sprite.penalty > 0:
-                    self.score_display -= int(sprite.penalty*0.10)
-                    sprite.penalty -= int(sprite.penalty*0.10)
-
-            transferscore = int(self.score*0.1)
-
-            if self.score > 0:
-                self.score -= transferscore
-                self.score_display += transferscore
                 
-        def bullet_collision(sprite_a, sprite_b, color_a, color_b, color_c):
+        def bullet_collide(sprite_a, sprite_b, color_a, color_b, color_c):
                 bullet_hit = pygame.sprite.groupcollide(sprite_a, sprite_b, False, False)
                 for bullet in bullet_hit:
                     bulletx = bullet.rect.x
@@ -730,38 +677,15 @@ class Gameplay(object):
                         if sprite.hit == False:
                             sprite.hit = True
 
-        # def enemy_gets_shot(bulletx, bullety, bulletvely):
-
-        #         if sprite.death == False:
-        #             self.accuracy[0] += 1
-        #             mod = 0
-        #             if sprite.speedx == 0 or sprite.speedy == 0:
-        #                 mod = 1
-        #             self.score += abs(15* (sprite.speedx+mod) * (sprite.speedy+mod) * self.acccalc)
-
-        #             if sprite.rect.y > 0:
-        #                 show_hit = Show_Hit_Score(sprite.speedx, sprite.speedy, sprite.rect.x+15, sprite.rect.y+15, (self.score-9))
-        #                 self.all.add(show_hit)
-                        
-        def enemyship_shoot():
-            for sprite in self.enemyships:
+        def enemy_shoot(enemy):
+            for sprite in enemy:
                 r = rd.randint(1,10000)
 
-                if r > 9500:
+                if r > 9900:
                     enemy_shoot = Shoot(sprite.rect.centerx, sprite.rect.centery, self.player.rect.centerx, self.player.rect.centery, (255,0,0), (60,0,0))
-                    self.all.add(enemy_shoot)                   
-
-        def player_shoot_asteroid():
-            player_shoot_asteroid = pygame.sprite.groupcollide(self.bullets, self.asteroids, True, False)
-            for sprite in player_shoot_asteroid:
-                x = sprite.rect.x  
-                y = sprite.rect.y
-                r = rd.randint(3,6)
-                for i in range(r):
-                    laser_particles = Particles(x, y, rd.randint(-5,5), rd.randint(-5,5), (0,(rd.randint(100,255)),0), rd.randint(25,100))
-                    rock_particles = Particles(x, y, rd.randint(-5,5), rd.randint(-5,5), (220,220,220), rd.randint(25,100))
-                    self.all.add(laser_particles, rock_particles)
-        
+                    self.all.add(enemy_shoot)
+                    self.enemybullet.add(enemy_shoot)                   
+    
         def player_health_pickup():
             player_health_pickup = pygame.sprite.spritecollide(self.player, self.powerup, True, pygame.sprite.collide_circle)
             if player_health_pickup and self.die == False:
@@ -774,42 +698,43 @@ class Gameplay(object):
             if self.player.health >= 196:
                 self.hp_pool = 0
 
-        def player_asteroid_collide():
-            player_asteroid_collide = pygame.sprite.spritecollide(self.player, self.asteroids, False, pygame.sprite.collide_circle)
-            if player_asteroid_collide:
-                self.player.health -= rd.randint(5,12)
-            
-            for sprite in player_asteroid_collide:
-                if dict[sprite]:
-                    d = Playerdamage(self.player.rect.x, self.player.rect.y)
+        def player_collide(sprite, health):
+            collision = pygame.sprite.spritecollide(self.player, sprite, False, pygame.sprite.collide_mask)
 
-                    self.all.add(d)
-        
-        def player_enemy_collide():
-            player_enemy_collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
-            if player_enemy_collide:
+            if collision:
                 if self.god_mode == False:
-                    self.player.health -= rd.randint(5,10)
-            
-            for sprite in player_enemy_collide:
-                if dict[sprite]:
+                    self.player.health -= health
+                
+            for s in collision:
+                if dict[s]:
                     d = Playerdamage(self.player.rect.x, self.player.rect.y)
+
                     self.all.add(d)
 
-            player_enemy_ship_collide = pygame.sprite.spritecollide(self.player, self.enemies, False, pygame.sprite.collide_circle)
-            if player_enemy_ship_collide:
-                if self.god_mode == False:
-                    self.player.health -= rd.randint(5,10)
-
-            for sprite in player_enemy_ship_collide:        
-                if dict[sprite]:
-                    d = Playerdamage(self.player.rect.x, self.player.rect.y)
-                    self.all.add(d)
-        
         def draw_to_screen():
             SCREEN.fill((0,0,0))
             self.all.draw(SCREEN)
-            
+        
+        def calculate_score():
+            for sprite in self.all_enemies:
+                if sprite.penalty > 0:
+                    self.score_display -= int(sprite.penalty*0.10)
+                    sprite.penalty -= int(sprite.penalty*0.10)-9
+
+                if sprite.score > 0 and sprite.death == False:
+                    self.scorebank += sprite.score
+                    sprite.death = True
+                    if sprite.rect.y > 0 and sprite.rect.y < HEIGHT:
+                        hit = Show_Hit_Score(sprite.speedx, sprite.speedy, sprite.rect.x, sprite.rect.y, sprite.score)
+                        self.all.add(hit)
+
+            if self.scorebank > 0:
+                self.score_display += int(self.scorebank*0.10)
+                self.scorebank -= int(self.scorebank*0.10)
+
+                if self.scorebank == 9:
+                    self.scorebank = 0
+        
         def hud_display():
             SCREEN.blit(self.healthbar.image,(25,5))
             for i in range(self.player.health):
@@ -832,18 +757,35 @@ class Gameplay(object):
                 GAMEFONT.render_to(SCREEN, (600,675), "Test Framerate: o", (255,0,0), None, size=12)
                 GAMEFONT.render_to(SCREEN, (800,675), "Toggle God Mode: y (" + str(self.god_mode) + ")", (255,0,0), None, size=12)
 
-        while self.running:       
+        while self.running:
             timed_events()
-            spawn()
             player_controls()
-            player_shoot()
-            bullet_collision(self.bullets,self.enemies, (0,rd.randint(100,255),0), (rd.randint(100,255),0,0), (147,112,219))
-            bullet_collision(self.bullets,self.enemyships, (0,rd.randint(100,255),0), (rd.randint(100,255),0,0), (20,20,20))
-            enemyship_shoot()
-            player_shoot_asteroid()
+            shooting(self.player, self.mouse_x, self.mouse_y, (0,255,0),(0,40,0), self.bullets)
+            
+            spawn(Enemy("beholder.png", 13, 75, 84, rd.randint(-3,3), rd.randint(1,8), 1, 0), (10000-self.level*100), self.enemies, True)
+            spawn(Enemy("enemy_ship.png", 6, 84, 84, rd.randint(-3,3), 1, 5, 10000), 9990, self.enemyships, True)
+            spawn(Asteroid(self.player.rect.centerx), 9950, self.asteroids, False)
+            spawn(Healthpack(),(10000-self.level*5), self.powerup, False)
+            spawn(Particles((self.player.rect.centerx+rd.randint(-25,+25)), (self.player.rect.centery+25), 0, rd.randint(5,10), (255, 165, 0), rd.randint(25,100)), 5000, self.fx, False)
+            
+            starcolor = rd.randint(5,255)
+            spawn(Particles(rd.randint(0,WIDTH),0,0,rd.randint(5,10),(starcolor,starcolor,starcolor),500), 1, self.fx, False)
+            
+            bullet_collide(self.bullets,self.enemies, (0,rd.randint(100,255),0), (rd.randint(100,255),0,0), (147,112,219))
+            bullet_collide(self.bullets,self.enemyships, (0,rd.randint(100,255),0), (rd.randint(100,255),0,0), (100,100,100))
+            bullet_collide(self.bullets, self.asteroids, (0,rd.randint(100,255),0), (255,255,255), (100,100,100))
+            bullet_collide(self.enemybullet, self.players, (rd.randint(100,255),0,0), (rd.randint(100,255),0,0), (100,100,100))
+            bullet_collide(self.enemybullet, self.asteroids, (rd.randint(100,255),0,0), (255,255,255), (100,100,100))
+            bullet_collide(self.enemybullet, self.enemies, (rd.randint(100,255),0,0), (rd.randint(100,255),0,0), (147,112,219))
+
+            player_collide(self.enemies, rd.randint(5,10))
+            player_collide(self.enemyships, rd.randint(5,10))
+            player_collide(self.asteroids, rd.randint(10,15))
+
+            enemy_shoot(self.enemyships)
+
             player_health_pickup()
-            player_asteroid_collide()
-            player_enemy_collide()
+            
             lose_game()
             go_to_next_level()  
             calculate_score()
