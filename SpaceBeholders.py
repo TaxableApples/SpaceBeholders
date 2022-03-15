@@ -10,7 +10,6 @@ pygame.init()
 pygame.freetype.init()
 WIDTH, HEIGHT = 1280, 720
 SOUND = True
-DEBUG = False
 SCORE = 0
 HIGHSCORE = 0
 GAME_FOLDER = path.dirname(__file__)
@@ -45,10 +44,11 @@ class Read_Sprite_sheet():
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.images = []
-        for i in range(11):
-            self.images.append(Read_Sprite_sheet("ship_pixel.png", 72, 48).get_image(0,i))
-        self.image = self.images[0]
+        self.images = [[], [], [], []]
+        for i in range(4):
+            for j in range(4):
+                self.images[j].append(Read_Sprite_sheet("ship_pixel.png", 72, 48).get_image(j,i))
+        self.image = self.images[0][0]
         self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
         self.radius = 44
@@ -56,10 +56,13 @@ class Player(pygame.sprite.Sprite):
         self.speedx = 0
         self.speedy = 0
         self.health = 196
+        self.damage = 0
         self.last_update = pygame.time.get_ticks()
         self._layer = 0
         self.image_index = 0
+        self.image_row = 0
         self.hit = False
+        self.hit_timer = 0
         self.shooting = False
 
         self.light_sm = pygame.image.load(path.join(IMG_FOLDER, "light.png")).convert()
@@ -73,24 +76,34 @@ class Player(pygame.sprite.Sprite):
     def update_image(self):
         now = pygame.time.get_ticks()
         self.image_index += 1
+        if self.image_index >= 3:
+            self.image_index = 0
 
-        if self.left_turn == False and self.right_turn == False:
-            if self.image_index > 3:
-                self.image_index = 0
-        
-        if self.left_turn == True:
-            if self.image_index >= 8:
-                self.image_index = 6
+        if self.speedx > 2:
+            self.image_row = 1
 
-        if self.right_turn == True:
-            if self.image_index >= 6:
-                self.image_index = 4
+        elif self.speedx < -2:
+            self.image_row = 2
+        else:
+            self.image_row = 0
+
+        if self.hit_timer > 0:
+            self.image_row = 3
 
         if now - self.last_update > 80:
-            self.image = self.images[self.image_index]
+            self.image = self.images[self.image_row][self.image_index]
             self.last_update = now
-
+            
         SCREEN.blit(self.light, (self.rect.x-WIDTH*2, self.rect.y-HEIGHT*2), special_flags=BLEND_MULT)
+
+    def take_damage(self):
+        if self.damage > 0:
+            self.health-=self.damage
+            self.damage-=self.damage
+            self.hit_timer = 20
+
+        if self.hit_timer > 0:
+            self.hit_timer -= 1
 
     def move(self):
         if self.speedx > 0:
@@ -104,14 +117,8 @@ class Player(pygame.sprite.Sprite):
         keystate = pygame.key.get_pressed()
         if keystate[pygame.K_a]:
             self.speedx = -5
-            self.left_turn = True
-        else:
-            self.left_turn = False
         if keystate[pygame.K_d]:
             self.speedx = 5
-            self.right_turn = True
-        else:
-            self.right_turn = False
         if keystate[pygame.K_w]:
             self.speedy = -5
         if keystate[pygame.K_s]:
@@ -129,6 +136,7 @@ class Player(pygame.sprite.Sprite):
 
     def update(self):
         self.update_image()
+        self.take_damage()
         self.rect = self.image.get_rect(center=self.rect.center)
         self.move()
         
@@ -282,6 +290,7 @@ class Enemy(pygame.sprite.Sprite):
         self.last_update = pygame.time.get_ticks()
         self.hit = False
         self.death = False
+        self.shooting = False
 
         self.shooting = False
         self.hp = hitpoints;
@@ -302,6 +311,14 @@ class Enemy(pygame.sprite.Sprite):
             
         if self.death == True:
             self.kill()
+
+    def shoot(self):
+        r = rd.randint(1,10000)
+
+        if r > 9800:
+            self.shooting = True
+        else:
+            self.shooting = False
 
     def update_image(self):
         now = pygame.time.get_ticks()
@@ -335,6 +352,7 @@ class Enemy(pygame.sprite.Sprite):
 
     def update(self):
         self.update_image()
+        self.shoot()
         self.move()
 
 class Asteroid(pygame.sprite.Sprite):
@@ -500,7 +518,7 @@ class Gameplay(object):
         self.scorebank = 0
         self.random = 0
         self.score_display = 0
-        self.level = 1
+        self.level = 0
         self.timer = 0
         self.accuracy = [1,1]
         self.acccalc = 300
@@ -538,7 +556,7 @@ class Gameplay(object):
         self.players.add(self.player)
 
     def run(self):
-
+        
         def timed_events():
             self.clock.tick(self.fps)
 
@@ -549,29 +567,18 @@ class Gameplay(object):
                 self.timer = 20.01
            
             if len(self.fade.sprites()) == 0:
-                if DEBUG:
-                    self.fadein_delay = True
-                else:
-                    self.fadein_delay = False
+                self.fadein_delay = False
 
         def spawn(thing, spawn_limit, sprite_group, isenemy):
-            if self.start == True and self.fadein_delay == False and DEBUG == False:
+            if self.start == True and self.fadein_delay == False:
 
                 self.random = rd.randint(1,10000)
-                if int(self.clock.get_fps()) > 59 and self.random >= spawn_limit:
+                if self.random >= spawn_limit:
                     self.all.add(thing)
                     sprite_group.add(thing)
 
                     if isenemy == True:
                         self.all_enemies.add(thing)
-
-            if DEBUG:
-                if int(self.clock.get_fps()) > 59:
-                    if self.test_frame_rate == True:
-                        enemy = Enemy("beholder.png", 13, 75, 84, rd.randint(-3,3), rd.randint(1,8), 1, 0)
-                        self.all.add(enemy)
-                        self.all_enemies.add(enemy)
-                        self.enemies.add(enemy)
 
         def player_controls():
             self.mouse_x, self.mouse_y = pygame.mouse.get_pos()
@@ -598,39 +605,21 @@ class Gameplay(object):
                                 if e.type == pygame.KEYDOWN:
                                     self.pause = False
                 
-                if DEBUG:
-                    if e.type == pygame.KEYDOWN:
-                        if e.key == pygame.K_y:
-                            if self.god_mode == False: self.god_mode = True
-                            else: self.god_mode = False
-
-                        if e.key == pygame.K_o: self.test_frame_rate = True
-
-                        if e.key == pygame.K_u:
-                            enemy = Enemy("beholder.png", 13, 75, 84, rd.randint(-3,3), rd.randint(1,8), 1, 0)
-                            self.all.add(enemy)
-                            self.all_enemies.add(enemy)
-                            self.enemies.add(enemy)
-
-                        if e.key == pygame.K_i:
-                            self.healthpack = Healthpack()
-                            self.powerup.add(self.healthpack)
-                            self.all.add(self.healthpack)
-
-        def shooting(sprite, target_x, target_y, color, glow, group):
+        def shooting(sprites, target_x, target_y, color, glow, group):
             self.bullet_timer -= 0.025
             self.timer = round(self.timer - .01, 2)
-        
-            if sprite.shooting:
-                if self.bullet_timer <= 0:
-                    self.bullet_timer = 0.5
-                    
-                    self.bullet = Shoot(sprite.rect.centerx, sprite.rect.centery, target_x, target_y, color, glow)
-                    self.all.add(self.bullet)
-                    group.add(self.bullet)
-                    if SOUND: 
-                        pygame.mixer.Channel(0).play(pygame.mixer.Sound(path.join(SOUND_FOLDER, "shoot.ogg")))
-                    self.accuracy[1] += 1
+
+            for sprite in sprites:
+                if sprite.shooting:
+                    if self.bullet_timer <= 0:
+                        self.bullet_timer = 1
+                        
+                        bullet = Shoot(sprite.rect.centerx, sprite.rect.centery, target_x, target_y, color, glow)
+                        self.all.add(bullet)
+                        group.add(bullet)
+                        # if SOUND: 
+                        #     pygame.mixer.Channel(0).play(pygame.mixer.Sound(path.join(SOUND_FOLDER, "shoot.ogg")))
+                        #self.accuracy[1] += 1
 
         def lose_game():
             if self.player.health <= 0:
@@ -651,11 +640,9 @@ class Gameplay(object):
         def go_to_next_level():
             if self.timer == 0:
                 levelup = True
-                newlevel = self.level + 1
+                
                 while levelup:
-                    if self.level != newlevel:
-                        self.level += 1
-
+                    self.level += 1
                     levelup = False                
                 
         def bullet_collide(sprite_a, sprite_b, color_a, color_b, color_c):
@@ -676,15 +663,6 @@ class Gameplay(object):
 
                         if sprite.hit == False:
                             sprite.hit = True
-
-        def enemy_shoot(enemy):
-            for sprite in enemy:
-                r = rd.randint(1,10000)
-
-                if r > 9900:
-                    enemy_shoot = Shoot(sprite.rect.centerx, sprite.rect.centery, self.player.rect.centerx, self.player.rect.centery, (255,0,0), (60,0,0))
-                    self.all.add(enemy_shoot)
-                    self.enemybullet.add(enemy_shoot)                   
     
         def player_health_pickup():
             player_health_pickup = pygame.sprite.spritecollide(self.player, self.powerup, True, pygame.sprite.collide_circle)
@@ -703,13 +681,8 @@ class Gameplay(object):
 
             if collision:
                 if self.god_mode == False:
-                    self.player.health -= health
-                
-            for s in collision:
-                if dict[s]:
-                    d = Playerdamage(self.player.rect.x, self.player.rect.y)
-
-                    self.all.add(d)
+                    self.player.hit = True
+                    self.player.damage += health
 
         def draw_to_screen():
             SCREEN.fill((0,0,0))
@@ -743,62 +716,43 @@ class Gameplay(object):
             GAMEFONT.render_to(SCREEN, (1150,10), "'Esc' to Quit", (255,255,255), None, size=12)
             GAMEFONT.render_to(SCREEN, (35,30), "Score: " + str(self.score_display), (255,255,255), None, size=25)            
             GAMEFONT.render_to(SCREEN, (35,60), "Level: " + str(self.level), (255,255,255), None, size=25)       
-            if self.timer < 3.0:
-                GAMEFONT.render_to(SCREEN, (470,300), "Next Wave In " + str(int(self.timer)), (255,255,255), None, size=27)
-
-            if DEBUG:
-                GAMEFONT.render_to(SCREEN, (10,550), "DEBUG MODE ON", (255,0,0), None, size=12)
-                GAMEFONT.render_to(SCREEN, (10,600), str(self.clock), (255,0,0), None, size=12)
-                GAMEFONT.render_to(SCREEN, (10,625), "Enemies: " + str(len(self.enemies)), (255,0,0), None, size=12)
-                GAMEFONT.render_to(SCREEN, (10,650), "Round: " + str(self.timer), (255,0,0), None, size=12) 
-                GAMEFONT.render_to(SCREEN, (10,675), "Accuracy: " + str(round(self.acccalc, 2)) + "%", (255,0,0), None, size=12)
-                GAMEFONT.render_to(SCREEN, (200,675), "Spawn Enemy: u", (255,0,0), None, size=12)
-                GAMEFONT.render_to(SCREEN, (400,675), "Spawn Health: p", (255,0,0), None, size=12)
-                GAMEFONT.render_to(SCREEN, (600,675), "Test Framerate: o", (255,0,0), None, size=12)
-                GAMEFONT.render_to(SCREEN, (800,675), "Toggle God Mode: y (" + str(self.god_mode) + ")", (255,0,0), None, size=12)
+            if self.timer < 2.0:
+                GAMEFONT.render_to(SCREEN, (470,300), "Level " + str(self.level+1), (rd.randint(10,255),rd.randint(10,255),rd.randint(10,255)), None, size=48)
 
         while self.running:
             timed_events()
             player_controls()
-            shooting(self.player, self.mouse_x, self.mouse_y, (0,255,0),(0,40,0), self.bullets)
-            
-            spawn(Enemy("beholder.png", 13, 75, 84, rd.randint(-3,3), rd.randint(1,8), 1, 0), (10000-self.level*100), self.enemies, True)
-            spawn(Enemy("enemy_ship.png", 6, 84, 84, rd.randint(-3,3), 1, 5, 10000), 9990, self.enemyships, True)
-            spawn(Asteroid(self.player.rect.centerx), 9950, self.asteroids, False)
-            spawn(Healthpack(),(10000-self.level*5), self.powerup, False)
-            spawn(Particles((self.player.rect.centerx+rd.randint(-25,+25)), (self.player.rect.centery+25), 0, rd.randint(5,10), (255, 165, 0), rd.randint(25,100)), 5000, self.fx, False)
-            
-            starcolor = rd.randint(5,255)
-            spawn(Particles(rd.randint(0,WIDTH),0,0,rd.randint(5,10),(starcolor,starcolor,starcolor),500), 1, self.fx, False)
-            
+            shooting(self.players, self.mouse_x, self.mouse_y, (0,255,0),(0,40,0), self.bullets)
+            shooting(self.enemyships, self.player.rect.centerx, self.player.rect.centery, (255,0,0), (60,0,0), self.enemybullet)
             bullet_collide(self.bullets,self.enemies, (0,rd.randint(100,255),0), (rd.randint(100,255),0,0), (147,112,219))
             bullet_collide(self.bullets,self.enemyships, (0,rd.randint(100,255),0), (rd.randint(100,255),0,0), (100,100,100))
             bullet_collide(self.bullets, self.asteroids, (0,rd.randint(100,255),0), (255,255,255), (100,100,100))
             bullet_collide(self.enemybullet, self.players, (rd.randint(100,255),0,0), (rd.randint(100,255),0,0), (100,100,100))
             bullet_collide(self.enemybullet, self.asteroids, (rd.randint(100,255),0,0), (255,255,255), (100,100,100))
             bullet_collide(self.enemybullet, self.enemies, (rd.randint(100,255),0,0), (rd.randint(100,255),0,0), (147,112,219))
-
             player_collide(self.enemies, rd.randint(5,10))
             player_collide(self.enemyships, rd.randint(5,10))
             player_collide(self.asteroids, rd.randint(10,15))
-
-            enemy_shoot(self.enemyships)
-
-            player_health_pickup()
-            
+            player_health_pickup()     
             lose_game()
             go_to_next_level()  
             calculate_score()
             draw_to_screen()            
             self.all.update()
             hud_display()
-            pygame.display.flip()                
+            pygame.display.flip()
+
+            if int(self.clock.get_fps()) > 59:           
+                spawn(Enemy("beholder.png", 13, 75, 84, rd.randint(-3,3), rd.randint(1,8), 1, 0), (10000-self.level*100), self.enemies, True)
+                spawn(Enemy("enemy_ship.png", 6, 84, 84, rd.randint(-3,3), 1, 5, 10000), 9990, self.enemyships, True)
+                spawn(Asteroid(self.player.rect.centerx), 9950, self.asteroids, False)
+                spawn(Healthpack(),(10000-self.level*5), self.powerup, False) 
+                if self.bullet_timer <= 0:
+                    spawn(Particles((self.player.rect.centerx+rd.randint(-25,+25)), (self.player.rect.centery+25), 0, rd.randint(5,10), (255, 165, 0), rd.randint(25,100)), 5000, self.fx, False)
+                    spawn(Particles(rd.randint(0,WIDTH),0,0,rd.randint(5,10),(255,255,rd.randint(5,255)),500), 1, self.fx, False)               
 
         global SCORE
-        if DEBUG == False:
-            SCORE = self.score_display
-        else:
-            SCORE = 0    
+        SCORE = self.score_display
         return SCORE
 
 class End_Game_Screen(object):
