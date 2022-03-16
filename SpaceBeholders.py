@@ -80,10 +80,10 @@ class Player(pygame.sprite.Sprite):
         if self.image_index >= 3:
             self.image_index = 0
 
-        if self.speedx > 2:
+        if self.speedx > 4:
             self.image_row = 1
 
-        elif self.speedx < -2:
+        elif self.speedx < -4:
             self.image_row = 2
         else:
             self.image_row = 0
@@ -110,22 +110,23 @@ class Player(pygame.sprite.Sprite):
 
     def move(self):
         if self.speedx > 0:
-            self.speedx -= .08
+            self.speedx -= .16
         if self.speedx < 0:
-            self.speedx += .08
+            self.speedx += .16
         if self.speedy > 0:
-            self.speedy -= .08
+            self.speedy -= .16
         if self.speedy < 0:
-            self.speedy += .08
+            self.speedy += .16
         keystate = pygame.key.get_pressed()
         if keystate[pygame.K_a]:
-            self.speedx = -5
+            self.speedx = -10
         if keystate[pygame.K_d]:
-            self.speedx = 5
+            self.speedx = 10
         if keystate[pygame.K_w]:
-            self.speedy = -5
+            self.speedy = -10
         if keystate[pygame.K_s]:
-            self.speedy = 5
+            self.speedy = 10
+
         if self.rect.left <= 5:
             self.rect.left = 5
         if self.rect.right >= WIDTH:
@@ -167,14 +168,20 @@ class Particles(pygame.sprite.Sprite):
         self.rect.y += self.yspeed
         self.rect.x += self.xspeed
         
-        if self.rect.y > HEIGHT or self.timer > self.lifespan:
+        if self.timer > self.lifespan:
+            self.kill()
+
+        if self.rect.y > HEIGHT or self.rect.y < 0:
+            self.kill()
+
+        if self.rect.x < 0 or self.rect.x > WIDTH:
             self.kill()
 
 class Show_Hit_Score(pygame.sprite.Sprite):
     def __init__(self, speedx, speedy, x, y, score):
         pygame.sprite.Sprite.__init__(self)
         self.score = str(int(score-9))
-        self.timeout = 60
+        self.timeout = 30
         self.image = pygame.Surface((1,1))
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -206,7 +213,7 @@ class Shoot(pygame.sprite.Sprite):
         self.velx = mouse_x - self.rect.centerx
         self.vely = mouse_y - self.rect.centery
         self.velocity = np.array([self.velx, self.vely])
-        self.velocity = 10 * self.velocity / np.linalg.norm(self.velocity)
+        self.velocity = 20 * self.velocity / np.linalg.norm(self.velocity)
         self._layer = 0
         self.glow = pygame.draw.circle(self.glow_seed, glow_color, (13, 13), 12)
 
@@ -235,7 +242,7 @@ class Healthpack(pygame.sprite.Sprite):
         self.image = pygame.image.load(path.join(IMG_FOLDER, "healthpack.png")).convert()
         self.image.set_colorkey((255,255,255))
         self.rect = self.image.get_rect()
-        self.speedy = rd.randint(4,10)
+        self.speedy = rd.randint(8,20)
         self.rect.y = -100
         self.rect.x = rd.randint(0,WIDTH)
         self._layer = 0
@@ -287,7 +294,7 @@ class Enemy(pygame.sprite.Sprite):
         if self.damage > 0:
             self.hp-=self.damage
             self.damage-=self.damage
-            self.hit_timer = 15
+            self.hit_timer = 8
 
         if self.hit_timer > 0:
             self.hit_timer -= 1
@@ -314,7 +321,7 @@ class Enemy(pygame.sprite.Sprite):
     def update_image(self):
         now = pygame.time.get_ticks()
 
-        if now - self.last_update > 80:
+        if now - self.last_update > 40:
             if self.frame >= self.image_range:
                 self.frame = 0
             self.frame +=1
@@ -358,7 +365,7 @@ class Asteroid(pygame.sprite.Sprite):
         self.radius = 44
         self.rect.y = -100
         self.rect.x = x
-        self.speedy = rd.randrange(1, 8)
+        self.speedy = rd.randrange(2, 16)
         self.last_update = pygame.time.get_ticks()
         self.random = rd.randint(1, 20)
         self._layer = 3
@@ -468,7 +475,7 @@ class Splashscreen(object):
 
         def timed_events():
             self.clock.tick(self.fps)
-            if int(self.clock.get_fps()) > 59.0:
+            if int(self.clock.get_fps()) > 29:
                 starseed = rd.randint(5,255)
                 self.stars = Particles(rd.randint(0,WIDTH),0,0,rd.randint(5,10),(starseed,starseed,rd.randint(5,255)),500)
                 self.all.add(self.stars)
@@ -515,7 +522,7 @@ class Gameplay(object):
         self.pause = False
         self.fadein_delay = True
         self.fadeout = 50
-        self.fps = 60
+        self.fps = 30
         self.hp_pool = 0
         self.mouse_x, self.mouse_y = pygame.mouse.get_pos()
         self.clock = pygame.time.Clock()
@@ -547,11 +554,11 @@ class Gameplay(object):
             self.timer -=1
 
             if self.timer <= 0:
-                self.timer = 2000
+                self.timer = 1000
                 self.level += 1
 
             if self.fadein_delay == True:
-                self.timer = 2000
+                self.timer = 1000
 
             #start the clock when the fade in dies...
             if len(self.fade.sprites()) == 0:
@@ -559,6 +566,9 @@ class Gameplay(object):
 
         def spawn(thing, spawn_limit, sprite_group, isenemy):
             if self.fadein_delay == False:
+
+                if (len(sprite_group) > 20):
+                    return
 
                 self.random = rd.randint(1,10000)
                 if self.random >= spawn_limit:
@@ -719,15 +729,14 @@ class Gameplay(object):
             hud_display()
             pygame.display.flip()
 
-            if int(self.clock.get_fps()) > 59:           
-                spawn(Enemy("beholder.png", 9, 75, 84, rd.randint(-3,3), rd.randint(1,8), 1, 0), (10000-self.level*100), self.enemies, True)
-                spawn(Enemy("enemy_ship.png", 4, 84, 84, rd.randint(-3,3), 1, 45, 10000), 9990, self.enemyships, True)
-                spawn(Asteroid(self.player.rect.centerx), 9950, self.asteroids, False)
-                spawn(Healthpack(),(10000-self.level*5), self.powerup, False) 
+            spawn(Enemy("beholder.png", 9, 75, 84, rd.randint(-6,6), rd.randint(2,16), 15, 0), (10000-self.level*100), self.enemies, True)
+            spawn(Enemy("enemy_ship.png", 4, 84, 84, rd.randint(-6,6), 1, 45, 10000), 9990, self.enemyships, True)
+            spawn(Asteroid(self.player.rect.centerx), 9950, self.asteroids, False)
+            spawn(Healthpack(),(10000-self.level*5), self.powerup, False) 
 
-                spawn(Particles((self.player.rect.centerx+rd.randint(-25,+25)), (self.player.rect.centery+25), 0, rd.randint(5,10), (255, 165, 0), rd.randint(25,100)), 5000, self.fx, False)
-                starseed = rd.randint(5,255)
-                spawn(Particles(rd.randint(0,WIDTH),0,0,rd.randint(5,10),(starseed,starseed,rd.randint(5,255)),500), 1, self.fx, False)               
+            spawn(Particles((self.player.rect.centerx+rd.randint(-25,+25)), (self.player.rect.centery+25), 0, rd.randint(5,10), (255, 165, 0), rd.randint(25,100)), 5000, self.fx, False)
+            starseed = rd.randint(5,255)
+            spawn(Particles(rd.randint(0,WIDTH),0,0,rd.randint(10,20),(starseed,starseed,rd.randint(5,255)),500), 1, self.fx, False)               
 
         global SCORE
         SCORE = self.score_display
@@ -778,6 +787,8 @@ class End_Game_Screen(object):
             if self.timer <= 0:
                 GAMEFONT.render_to(SCREEN, (521,410), "Press 'esc' to quit", (255,0,0), None, size=20)
                 GAMEFONT.render_to(SCREEN, (463,450), "Press 'any key' to continue", (255,0,0), None, size=20)
+
+            GAMEFONT.render_to(SCREEN, (521,510), self.fps, (255,0,0), None, size=20)
 
         while self.running:
             timed_events()
