@@ -16,7 +16,7 @@ GAME_FOLDER = path.dirname(__file__)
 RESOURCES_FOLDER = path.join(GAME_FOLDER, "resources")
 IMG_FOLDER = path.join(RESOURCES_FOLDER, "images")
 SOUND_FOLDER = path.join(RESOURCES_FOLDER, "audio")
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), FULLSCREEN, 32)
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), 32) #FULLSCREEN | DOUBLEBUF, 
 GAMEFONT = pygame.freetype.Font(path.join(RESOURCES_FOLDER, "Retro Gaming.ttf"), 22)
 
 #Fix no sound card bug in pygame
@@ -241,6 +241,8 @@ class Healthpack(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load(path.join(IMG_FOLDER, "healthpack.png")).convert()
         self.image.set_colorkey((255,255,255))
+        self.glow_seed = pygame.Surface((44,44))
+        self.glow = pygame.draw.circle(self.glow_seed, (0,40,0), (22, 22), 22)
         self.rect = self.image.get_rect()
         self.speedy = rd.randint(8,20)
         self.rect.y = -100
@@ -248,6 +250,7 @@ class Healthpack(pygame.sprite.Sprite):
         self._layer = 0
 
     def update(self):
+        SCREEN.blit(self.glow_seed, (self.rect.x-4, self.rect.y-4), special_flags=BLEND_RGB_ADD)
         self.rect.y += self.speedy
         if self.rect.top > HEIGHT + 10:
             self.kill()
@@ -548,6 +551,11 @@ class Gameplay(object):
 
     def run(self):
         
+        WHITE, RED, PURPLE, GREEN, GREY, ORANGE, RED_GLOW, GREEN_GLOW = (255,255,255), (255,0,0), (147,112,219), (0,255,0), (100,100,100), (255, 165, 0), (40,0,0), (0,40,0)
+        ZEROSCORE, ALLOWSCORE = 0, 1
+        B_FRAMELIMIT, B_WIDTH, B_HEIGHT, BEHOLDER_HP = 9, 75, 84, 15
+        S_FRAMELIMIT, S_WIDTH, S_HEIGHT, ENEMYSHIP_HP = 4, 84,84, 45
+
         def game_time():
             self.clock.tick(self.fps)
 
@@ -567,7 +575,7 @@ class Gameplay(object):
         def spawn(thing, spawn_limit, sprite_group, isenemy):
             if self.fadein_delay == False:
 
-                if (len(sprite_group) > 20):
+                if (len(sprite_group) > 20 + self.level * 2):
                     return
 
                 self.random = rd.randint(1,10000)
@@ -706,39 +714,59 @@ class Gameplay(object):
                 GAMEFONT.render_to(SCREEN, (470,300), "Level " + str(self.level+1), (rd.randint(10,255),rd.randint(10,255),rd.randint(10,255)), None, size=48)
 
         while self.running:
+            exhaust_x, exhaust_y, exhaust_speed_x, exhaust_speed_y = (self.player.rect.centerx+rd.randint(-25,+25)), (self.player.rect.centery+25), 0, rd.randint(5,10)
+            starseed = rd.randint(5,255)
+            star_color = (starseed,starseed,rd.randint(5,255))
+            lifespan = 50
+            standard_damage = rd.randint(5,10)
+            high_damage = rd.randint(7,15)
+            common = (9700-self.level*100)
+            uncommon = (9990-self.level*10)
+            rare = (10000-self.level)
+
+            beholder = Enemy("beholder.png", B_FRAMELIMIT, B_WIDTH, B_HEIGHT, rd.randint(-6,6), rd.randint(2,16), BEHOLDER_HP, ZEROSCORE)
+            enemyship = Enemy("enemy_ship.png", S_FRAMELIMIT, S_WIDTH, S_HEIGHT, rd.randint(-6,6), rd.randint(1,2), ENEMYSHIP_HP, 10000)
+            asteroid = Asteroid(self.player.rect.centerx)
+            exhaust = Particles(exhaust_x, exhaust_y, exhaust_speed_x, exhaust_speed_y, ORANGE, lifespan)
+            star = Particles(rd.randint(0,WIDTH), 0, 0, rd.randint(10,20), star_color, lifespan)
+
             game_time()
             player_controls()
 
-            shooting(self.players, self.mouse_x, self.mouse_y, (0,255,0),(0,40,0), self.bullets)
-            shooting(self.enemyships, self.player.rect.centerx, self.player.rect.centery, (255,0,0), (60,0,0), self.enemybullet)
+            shooting(self.players, self.mouse_x, self.mouse_y, GREEN, GREEN_GLOW, self.bullets)
+            shooting(self.enemyships, self.player.rect.centerx, self.player.rect.centery, RED, RED_GLOW, self.enemybullet)
 
-            bullet_collide(self.bullets, self.enemies, (0,rd.randint(100,255),0), (rd.randint(100,255),0,0), (147,112,219), 1)
-            bullet_collide(self.bullets, self.enemyships, (0,rd.randint(100,255),0), (rd.randint(100,255),0,0), (100,100,100), 1)
-            bullet_collide(self.bullets, self.asteroids, (0,rd.randint(100,255),0), (255,255,255), (100,100,100), 0)
-            bullet_collide(self.enemybullet, self.players, (rd.randint(100,255),0,0), (rd.randint(100,255),0,0), (100,100,100), 25)
-            bullet_collide(self.enemybullet, self.asteroids, (rd.randint(100,255),0,0), (255,255,255), (100,100,100), 0)
-            bullet_collide(self.enemybullet, self.enemies, (rd.randint(100,255),0,0), (rd.randint(100,255),0,0), (147,112,219), 0)
+            bullet_collide(self.bullets, self.enemies, GREEN, RED, PURPLE, ALLOWSCORE)
+            bullet_collide(self.bullets, self.enemyships, GREEN, RED, GREY, ALLOWSCORE)
+            bullet_collide(self.bullets, self.asteroids, GREEN, WHITE, GREY, ZEROSCORE)
+            bullet_collide(self.enemybullet, self.players, RED, RED, GREY, ALLOWSCORE)
+            bullet_collide(self.enemybullet, self.asteroids, RED, WHITE, GREY, ZEROSCORE)
+            bullet_collide(self.enemybullet, self.enemies, RED, RED, PURPLE, ZEROSCORE)
 
-            player_collide(self.enemies, rd.randint(5,10))
-            player_collide(self.enemyships, rd.randint(5,10))
-            player_collide(self.asteroids, rd.randint(10,15))
+            player_collide(self.enemies, standard_damage)
+            player_collide(self.enemyships, standard_damage)
+            player_collide(self.asteroids, high_damage)
 
-            player_health_pickup()     
+            player_health_pickup()
+
+            spawn(beholder, common, self.enemies, True)
+            spawn(enemyship, uncommon, self.enemyships, True)
+            spawn(asteroid, uncommon, self.asteroids, False)
+            spawn(Healthpack(), rare, self.powerup, False) 
+            spawn(exhaust, common, self.fx, False)
+            spawn(star, 1, self.fx, False)    
+
+            for sprite in self.powerup:
+                greenpower = Particles((sprite.rect.x + rd.randint(0,20)), sprite.rect.y, 0, sprite.speedy-rd.randint(1,3), GREEN, lifespan)
+                spawn(greenpower, 0, self.fx, False)
+
             lose_game() 
             calculate_score()
+
             draw_to_screen()            
             self.all.update()
             hud_display()
             pygame.display.flip()
-
-            spawn(Enemy("beholder.png", 9, 75, 84, rd.randint(-6,6), rd.randint(2,16), 15, 0), (10000-self.level*100), self.enemies, True)
-            spawn(Enemy("enemy_ship.png", 4, 84, 84, rd.randint(-6,6), 1, 45, 10000), 9990, self.enemyships, True)
-            spawn(Asteroid(self.player.rect.centerx), 9950, self.asteroids, False)
-            spawn(Healthpack(),(10000-self.level*5), self.powerup, False) 
-
-            spawn(Particles((self.player.rect.centerx+rd.randint(-25,+25)), (self.player.rect.centery+25), 0, rd.randint(5,10), (255, 165, 0), rd.randint(25,100)), 5000, self.fx, False)
-            starseed = rd.randint(5,255)
-            spawn(Particles(rd.randint(0,WIDTH),0,0,rd.randint(10,20),(starseed,starseed,rd.randint(5,255)),500), 1, self.fx, False)               
 
         global SCORE
         SCORE = self.score_display
@@ -801,6 +829,7 @@ class Main(object):
         pygame.display.set_caption("SPACE BEHOLDERS")
         pygame.mouse.set_visible(False)
         pygame.event.set_grab(True)
+        pygame.event.set_allowed([QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP])
         
         # if SOUND: 
         #     pygame.mixer.music.load(path.join(SOUND_FOLDER,"space track.ogg"))
