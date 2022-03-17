@@ -558,7 +558,7 @@ class Gameplay(object):
                 self.level += 1
 
             if self.fadein_delay == True:
-                self.timer = 1000
+                self.timer = 500
 
             #start the clock when the fade in dies...
             if len(self.fade.sprites()) == 0:
@@ -701,6 +701,7 @@ class Gameplay(object):
             GAMEFONT.render_to(SCREEN, (1150,10), "'Esc' to Quit", (255,255,255), None, size=12)
             GAMEFONT.render_to(SCREEN, (35,30), "Score: " + str(self.score_display), (255,255,255), None, size=25)            
             GAMEFONT.render_to(SCREEN, (35,60), "Level: " + str(self.level), (255,255,255), None, size=25)       
+
             if self.timer <= 100:
                 GAMEFONT.render_to(SCREEN, (470,300), "Level " + str(self.level+1), (rd.randint(10,255),rd.randint(10,255),rd.randint(10,255)), None, size=48)
 
@@ -721,6 +722,7 @@ class Gameplay(object):
             player_collide(self.enemies, rd.randint(5,10))
             player_collide(self.enemyships, rd.randint(5,10))
             player_collide(self.asteroids, rd.randint(10,15))
+
             player_health_pickup()     
             lose_game() 
             calculate_score()
@@ -787,8 +789,6 @@ class End_Game_Screen(object):
             if self.timer <= 0:
                 GAMEFONT.render_to(SCREEN, (521,410), "Press 'esc' to quit", (255,0,0), None, size=20)
                 GAMEFONT.render_to(SCREEN, (463,450), "Press 'any key' to continue", (255,0,0), None, size=20)
-
-            GAMEFONT.render_to(SCREEN, (521,510), self.fps, (255,0,0), None, size=20)
 
         while self.running:
             timed_events()
